@@ -5,6 +5,9 @@ const CONF_COLORS = ['#6366f1','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899'
 const CONF_NAMES = ['Estado A','Estado B','Estado C','Estado D','Estado E','Estado F','Estado G'];
 const DARK = {bg:'#1a2236', grid:'#1e293b', text:'#94a3b8'};
 
+// Base URL: detecta automáticamente si está detrás de un proxy (e.g. /flexconsensus/)
+const BASE_URL = window.location.pathname.replace(/\/+$/, '').replace(/\/(api|static).*$/, '') || '';
+
 let currentProtein = null;
 let currentAnalysis = null;
 
@@ -43,7 +46,7 @@ async function searchProteins() {
     container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Buscando en RCSB PDB...</div>';
 
     try {
-        const resp = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const resp = await fetch(`${BASE_URL}/api/search?q=${encodeURIComponent(q)}`);
         const data = await resp.json();
 
         if (data.error) {
@@ -95,7 +98,7 @@ async function selectProtein(pdbId) {
     detail.style.opacity = '0.5';
 
     try {
-        const resp = await fetch(`/api/protein/${pdbId}`);
+        const resp = await fetch(`${BASE_URL}/api/protein/${pdbId}`);
         const p = await resp.json();
         if (p.error) throw new Error(p.error);
         currentProtein = p;
@@ -183,7 +186,7 @@ async function runAnalysis() {
     }, 400);
 
     try {
-        const resp = await fetch('/api/analyze', {
+        const resp = await fetch(`${BASE_URL}/api/analyze`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
