@@ -428,18 +428,35 @@ const LAYOUT_3D = {
         bgcolor:DARK.bg,
         camera:{eye:{x:1.5,y:1.5,z:1.2}},
     },
-    showlegend:false,
+    showlegend:true,
+    legend:{
+        x:0.01,y:0.99,
+        bgcolor:'rgba(26,34,54,.85)',
+        bordercolor:DARK.grid,
+        borderwidth:1,
+        font:{size:11,color:DARK.text},
+        itemsizing:'constant',
+    },
 };
 const PCONFIG = {displayModeBar:true,displaylogo:false,responsive:true};
 
 function render3D(containerId, data, labels, methodName) {
-    Plotly.newPlot(containerId, [{
-        type:'scatter3d', mode:'markers',
-        x:data.x, y:data.y, z:data.z,
-        marker:{size:2,color:labels.map(l=>CONF_COLORS[l]),opacity:.7},
-        hovertemplate:`<b>${methodName}</b><br>Conformacion: %{text}<br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra></extra>`,
-        text:labels.map(l=>CONF_NAMES[l]),
-    }], LAYOUT_3D, PCONFIG);
+    // Separar cada conformación en un trace independiente con su leyenda
+    const uniqueLabels = [...new Set(labels)].sort((a,b)=>a-b);
+    const traces = uniqueLabels.map(label => {
+        const mask = labels.map((l,i)=>l===label?i:null).filter(i=>i!==null);
+        return {
+            type:'scatter3d', mode:'markers',
+            name: CONF_NAMES[label],
+            x: mask.map(i=>data.x[i]),
+            y: mask.map(i=>data.y[i]),
+            z: mask.map(i=>data.z[i]),
+            marker:{size:2.5, color:CONF_COLORS[label], opacity:.7},
+            hovertemplate:`<b>${methodName} — ${CONF_NAMES[label]}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>${CONF_NAMES[label]}</extra>`,
+            legendgroup: CONF_NAMES[label],
+        };
+    });
+    Plotly.newPlot(containerId, traces, LAYOUT_3D, PCONFIG);
 }
 
 function renderConsensus(colorBy, btnEl) {
@@ -453,21 +470,39 @@ function renderConsensus(colorBy, btnEl) {
     }
 
     const isLabels = colorBy === 'labels';
-    const colors = isLabels ? a.labels.map(l=>CONF_COLORS[l]) : a.errors;
+    const consensusLayout = {...LAYOUT_3D, margin:{l:0,r:0,t:20,b:0}};
 
-    Plotly.newPlot('chart-consensus', [{
-        type:'scatter3d', mode:'markers',
-        x:a.consensus.x, y:a.consensus.y, z:a.consensus.z,
-        marker:{
-            size:2.5, color:colors, opacity:.7,
-            colorscale: isLabels ? undefined : 'Viridis',
-            ...(isLabels ? {} : {colorbar:{title:{text:'Error',font:{size:10,color:DARK.text}},tickfont:{color:DARK.text,size:9},thickness:15,len:.6}}),
-        },
-        hovertemplate: isLabels
-            ? '<b>Consenso</b><br>Conformacion: %{text}<br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>Espacio de consenso unificado</extra>'
-            : '<b>Error: %{marker.color:.4f}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>Bajo = fiable, Alto = dudoso</extra>',
-        text:a.labels.map(l=>CONF_NAMES[l]),
-    }], {...LAYOUT_3D, margin:{l:0,r:0,t:20,b:0}}, PCONFIG);
+    if (isLabels) {
+        // Por conformación: un trace por cada conformación con leyenda
+        const uniqueLabels = [...new Set(a.labels)].sort((x,y)=>x-y);
+        const traces = uniqueLabels.map(label => {
+            const mask = a.labels.map((l,i)=>l===label?i:null).filter(i=>i!==null);
+            return {
+                type:'scatter3d', mode:'markers',
+                name: CONF_NAMES[label],
+                x: mask.map(i=>a.consensus.x[i]),
+                y: mask.map(i=>a.consensus.y[i]),
+                z: mask.map(i=>a.consensus.z[i]),
+                marker:{size:2.5, color:CONF_COLORS[label], opacity:.7},
+                hovertemplate:`<b>Consenso — ${CONF_NAMES[label]}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>${CONF_NAMES[label]}</extra>`,
+            };
+        });
+        Plotly.newPlot('chart-consensus', traces, consensusLayout, PCONFIG);
+    } else {
+        // Por error: colorscale continua
+        Plotly.newPlot('chart-consensus', [{
+            type:'scatter3d', mode:'markers',
+            x:a.consensus.x, y:a.consensus.y, z:a.consensus.z,
+            marker:{
+                size:2.5, color:a.errors, opacity:.7,
+                colorscale:'Viridis',
+                colorbar:{title:{text:'Error',font:{size:10,color:DARK.text}},tickfont:{color:DARK.text,size:9},thickness:15,len:.6},
+            },
+            hovertemplate:'<b>Error: %{marker.color:.4f}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>Bajo = fiable, Alto = dudoso</extra>',
+            text:a.labels.map(l=>CONF_NAMES[l]),
+            showlegend:false,
+        }], {...consensusLayout, showlegend:false}, PCONFIG);
+    }
 }
 
 function renderHistogram(a) {
