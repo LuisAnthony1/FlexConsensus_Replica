@@ -36,25 +36,41 @@ function showView(name) {
 // =============================================
 // 3D PROTEIN VIEWER (3Dmol.js)
 // =============================================
+function destroyViewer(viewerRef) {
+    try { if (viewerRef) viewerRef.clear(); } catch(e) {}
+}
+
 function load3DViewer(containerId, pdbId) {
     const container = document.getElementById(containerId);
-    if (!container) return null;
+    if (!container) return;
 
-    // Clear and show loading
-    container.innerHTML = '';
-    const loadingDiv = document.createElement('div');
-    loadingDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:.85rem;';
-    loadingDiv.textContent = 'Cargando estructura 3D...';
-    container.appendChild(loadingDiv);
+    // Destroy previous viewer if exists
+    if (containerId === 'protein-viewer-3d') { destroyViewer(proteinViewer); proteinViewer = null; }
+    if (containerId === 'results-viewer-3d') { destroyViewer(resultsViewer); resultsViewer = null; }
 
-    // Small delay to ensure container is rendered and has dimensions
+    // Fully clear container
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:.85rem;">Cargando estructura 3D...</div>';
+
+    // Ensure container has dimensions before creating viewer
+    const rect = container.getBoundingClientRect();
+    if (rect.width < 10 || rect.height < 10) {
+        // Container not visible yet, retry after delay
+        setTimeout(() => load3DViewer(containerId, pdbId), 500);
+        return;
+    }
+
     setTimeout(() => {
         container.innerHTML = '';
         try {
             const viewer = $3Dmol.createViewer(container, {
                 backgroundColor: '#0d1117',
                 antialias: true,
+                width: rect.width,
+                height: rect.height,
             });
+
+            if (containerId === 'protein-viewer-3d') proteinViewer = viewer;
+            else if (containerId === 'results-viewer-3d') resultsViewer = viewer;
 
             const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
             fetch(pdbUrl).then(r => {
@@ -66,7 +82,7 @@ function load3DViewer(containerId, pdbId) {
                 viewer.zoomTo();
                 viewer.render();
                 viewer.spin('y');
-                setTimeout(() => viewer.spin(false), 3000);
+                setTimeout(() => { try { viewer.spin(false); } catch(e){} }, 3000);
             }).catch(() => {
                 const cifUrl = `https://files.rcsb.org/download/${pdbId}.cif`;
                 fetch(cifUrl).then(r => r.text()).then(cifData => {
@@ -75,19 +91,15 @@ function load3DViewer(containerId, pdbId) {
                     viewer.zoomTo();
                     viewer.render();
                     viewer.spin('y');
-                    setTimeout(() => viewer.spin(false), 3000);
+                    setTimeout(() => { try { viewer.spin(false); } catch(e){} }, 3000);
                 }).catch(() => {
                     container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:.82rem;padding:1rem;text-align:center;">No se pudo cargar la estructura 3D.<br>Intenta con otra proteina.</div>';
                 });
             });
-
-            // Store viewer reference
-            if (containerId === 'protein-viewer-3d') proteinViewer = viewer;
-            else if (containerId === 'results-viewer-3d') resultsViewer = viewer;
         } catch (e) {
             container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:.82rem;">Visor 3D no disponible</div>';
         }
-    }, 300);
+    }, 200);
 }
 
 function switchProteinView(mode, btnEl) {
@@ -342,10 +354,10 @@ function renderResults(a) {
     const mantelQuality = a.mantel_r > 0.7 ? 'alta' : a.mantel_r > 0.5 ? 'moderada' : 'baja';
     const mantelEmoji = a.mantel_r > 0.7 ? 'good' : a.mantel_r > 0.5 ? 'warn' : 'bad';
 
-    // Summary
+    // Summary (no image to avoid layout overflow issues)
     document.getElementById('results-summary').innerHTML = `
         <div class="results-summary-box">
-            <img src="${p.image_url}" onerror="this.style.display='none'" alt="${p.pdb_id}">
+            <div class="rsb-icon">FC</div>
             <div class="rsb-info">
                 <h2>${p.pdb_id} &mdash; ${name}</h2>
                 <p>Analisis FlexConsensus completado. Se procesaron <strong>${a.n_particles.toLocaleString()} imagenes</strong>,

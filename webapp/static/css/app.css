@@ -28,7 +28,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
 /* VIEWS */
-.view{display:none;margin-top:60px;}.view.active{display:block;}
+.view{display:none;margin-top:60px;position:relative;overflow:hidden;}.view.active{display:block;overflow:visible;}
 
 /* SEARCH HERO */
 .search-hero{padding:4rem 2rem 2rem;text-align:center;background:radial-gradient(ellipse at top,rgba(99,102,241,0.08),transparent 60%);}
@@ -153,7 +153,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .results-header{display:flex;gap:.75rem;padding:1.5rem 2rem .5rem;}
 .results-summary{max-width:1200px;margin:1rem auto;padding:0 2rem;}
 .results-summary-box{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.04));border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:1.5rem 2rem;display:flex;align-items:center;gap:2rem;overflow:hidden;}
-.results-summary-box img{width:80px;height:80px;border-radius:12px;object-fit:cover;flex-shrink:0;}
+.rsb-icon{width:50px;height:50px;background:linear-gradient(135deg,var(--accent),#a78bfa);border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;flex-shrink:0;}
+
+/* Ensure 3Dmol canvases stay inside their containers */
+.protein-3d-container,.results-3d-container{position:relative;overflow:hidden;}
+.protein-3d-container canvas,.results-3d-container canvas,.protein-3d-container div,.results-3d-container div{max-width:100%!important;max-height:100%!important;}
 .rsb-info{flex:1;}
 .rsb-info h2{font-size:1.2rem;font-weight:700;margin-bottom:.25rem;}
 .rsb-info p{font-size:.85rem;color:var(--text2);}
