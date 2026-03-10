@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+*.so
+
+# Entornos
+venv/
+.env
+*.log
+
+# Datos pesados (NO subir a GitHub)
+data/empiar_*/
+data/cryobench/IgG-RL/
+data/cryobench/MDSpike/
+DATOS/CryoBench/
+DATOS/EMPIAR/
+*.mrcs
+*.mrc
+*.hdf5
+*.h5
+*.npy
+*.pkl
+
+# Repos clonados (se re-clonan en AWS)
+METODOS_IA/cryodrgn/
+SOFTWARE/Flexutils-Toolkit/
+SOFTWARE/scipion-em-flexutils/
+SOFTWARE/scipion-3.0/
+
+# Resultados (se regeneran)
+results/*/hetsiren/
+results/*/cryodrgn/
+results/*/flexconsensus/network/
+results/*/decoded_volumes/
+results/*/pdb_references/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Webapp cache
+webapp/data/analyses/
+
+# Jupyter
+.ipynb_checkpoints/

@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexConsensus - Replicacion del Paper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <a href="#" class="navbar-brand">
+        <div class="logo">FC</div>
+        <div>
+            <h1>FlexConsensus</h1>
+            <span>Nature Methods 2025</span>
+        </div>
+    </a>
+    <ul class="nav-links">
+        <li><a href="#que-es" class="active">Que es</a></li>
+        <li><a href="#la-proteina">La Proteina</a></li>
+        <li><a href="#el-problema">El Problema</a></li>
+        <li><a href="#methodology">Pipeline</a></li>
+        <li><a href="#latent-spaces">Espacios Latentes</a></li>
+        <li><a href="#consensus">Consenso</a></li>
+        <li><a href="#metrics">Metricas</a></li>
+        <li><a href="#como-probar">Como Probar</a></li>
+        <li><a href="#que-datos">Datos Obtenidos</a></li>
+        <li><a href="#conclusions">Conclusiones</a></li>
+    </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-badge">
+        <span class="dot"></span>
+        Replicacion del Paper - Nature Methods 2025
+    </div>
+    <h2>FlexConsensus</h2>
+    <p class="hero-subtitle">
+        Un nuevo algoritmo que permite identificar con mayor precision
+        la flexibilidad en la estructura 3D de las proteinas
+    </p>
+    <p class="hero-authors">
+        Herreros, D. et al. &mdash; Centro Nacional de Biotecnologia (CNB-CSIC), Madrid, Espana
+    </p>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 1: QUE ES FLEXCONSENSUS              -->
+<!-- ============================================ -->
+<section class="section" id="que-es">
+    <div class="section-header">
+        <div class="icon">&#128300;</div>
+        <div>
+            <h3>Que es FlexConsensus?</h3>
+            <p>Entendiendo el software y por que es importante</p>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card highlight">
+            <h4>Definicion Simple</h4>
+            <p>
+                <strong>FlexConsensus</strong> es un algoritmo de inteligencia artificial que toma los resultados
+                de <em>multiples metodos de analisis</em> de proteinas y los combina en un unico resultado
+                unificado y confiable. Piensa en el como un <strong>"arbitro"</strong> que decide en que coinciden
+                varios expertos y en que no.
+            </p>
+            <p style="margin-top:0.75rem;">
+                En terminos tecnicos: es un <strong>multi-autoencoder</strong> (red neuronal con multiples codificadores
+                y un decodificador compartido) que alinea espacios latentes de diferentes metodos de heterogeneidad
+                en Cryo-EM y produce una metrica de fiabilidad llamada <strong>"consensus error"</strong>.
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h4>Que son las proteinas?</h4>
+            <p>
+                Las proteinas son las <strong>maquinas moleculares</strong> de las celulas. Estan formadas por cadenas
+                de aminoacidos que se pliegan en formas 3D especificas. <strong>No son rigidas</strong>:
+                se doblan, giran y cambian de forma constantemente. Estas diferentes formas se llaman
+                <strong>conformaciones</strong>.
+            </p>
+            <p style="margin-top:0.5rem;">
+                Entender las conformaciones es clave porque: la forma de la proteina determina su funcion.
+                Si cambia de forma, cambia lo que hace. Esto es fundamental para disenar farmacos
+                (el farmaco se "acopla" a una forma especifica) y entender enfermedades (muchas son causadas
+                por proteinas mal plegadas, como el Alzheimer).
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h4>Que es Cryo-EM?</h4>
+            <p>
+                <strong>Criomicroscopia electronica (Cryo-EM)</strong> es una tecnica que:
+            </p>
+            <ol style="margin-top:0.5rem;padding-left:1.2rem;color:var(--text-secondary);font-size:0.88rem;line-height:1.8;">
+                <li>Congela la proteina instantaneamente en hielo vitreo (a -180C)</li>
+                <li>Le dispara un haz de electrones (como un microscopio pero con electrones en vez de luz)</li>
+                <li>Captura miles de <strong>"fotos" 2D</strong> llamadas <strong>particulas</strong></li>
+                <li>Cada foto captura la proteina en una posicion y conformacion diferente</li>
+                <li>Con software, reconstruye la estructura 3D a partir de todas las fotos</li>
+            </ol>
+            <p style="margin-top:0.5rem;">
+                <span class="tooltip-trigger" data-tooltip="Premio Nobel de Quimica 2017 otorgado a Jacques Dubochet, Joachim Frank y Richard Henderson por desarrollar Cryo-EM. Revoluciono la biologia estructural al permitir ver proteinas sin cristalizarlas.">[Nobel de Quimica 2017]</span>
+                &mdash; Resolucion atomica sin necesidad de cristalizar la proteina.
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h4>Que es un Espacio Latente?</h4>
+            <p>
+                Imagina que tienes 50,000 fotos de una proteina. Cada foto tiene millones de pixeles.
+                Un <strong>espacio latente</strong> comprime toda esa informacion en solo 8 numeros por foto.
+            </p>
+            <p style="margin-top:0.5rem;">
+                Es como un <strong>"mapa simplificado"</strong> donde cada punto representa una foto,
+                y las fotos de proteinas con formas similares quedan cerca entre si. Asi puedes visualizar
+                50,000 imagenes en un solo grafico 3D y ver patrones: cuantas formas diferentes tiene la proteina,
+                cuales son las mas comunes, y como transiciona entre ellas.
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h4>Que es un Paisaje Conformacional?</h4>
+            <p>
+                Es la <strong>visualizacion del espacio latente</strong>: un grafico 3D donde cada nube de puntos
+                (cluster) es un grupo de particulas en conformaciones similares.
+            </p>
+            <p style="margin-top:0.5rem;">
+                <strong>Que ves en los graficos de esta pagina:</strong> Cada punto de color es una particula
+                (una foto 2D de la proteina). Los colores representan conformaciones diferentes. Las nubes de puntos
+                son grupos de fotos donde la proteina tiene una forma similar. La distancia entre nubes indica
+                que tan diferentes son esas conformaciones.
+            </p>
+        </div>
+
+        <div class="info-card">
+            <h4>Por que "Consenso"?</h4>
+            <p>
+                Diferentes IAs (CryoDRGN, HetSIREN, etc.) analizan las <strong>mismas 50,000 fotos</strong>
+                pero producen paisajes conformacionales <strong>completamente diferentes</strong>.
+                No hay forma de saber cual IA tiene razon.
+            </p>
+            <p style="margin-top:0.5rem;">
+                FlexConsensus dice: <em>"Si todas las IAs coinciden en que esta particula pertenece a esta
+                conformacion, entonces el resultado es <strong>fiable</strong>. Si no coinciden,
+                el resultado es <strong>dudoso</strong>."</em> Es el mismo principio que usar multiples
+                fuentes para verificar una noticia.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 2: LA PROTEINA QUE ANALIZAMOS        -->
+<!-- ============================================ -->
+<section class="section" id="la-proteina">
+    <div class="section-header">
+        <div class="icon">&#129516;</div>
+        <div>
+            <h3>La Proteina que Analizamos: Anticuerpo IgG</h3>
+            <p>Que es, por que se eligio, y que conformaciones tiene</p>
+        </div>
+    </div>
+
+    <div class="section-desc">
+        <p>En esta replicacion analizamos el <strong>anticuerpo Inmunoglobulina G (IgG)</strong>,
+           la proteina mas abundante en la sangre humana y pieza clave del sistema inmunologico.
+           Se uso el dataset <strong>IgG-RL</strong> del benchmark <strong>CryoBench</strong>.</p>
+    </div>
+
+    <div class="protein-grid">
+        <div class="protein-card">
+            <div class="protein-icon">&#128170;</div>
+            <h5>Que es el IgG?</h5>
+            <p>El anticuerpo IgG es una proteina con forma de <strong>"Y"</strong>.
+               Tiene dos "brazos" (regiones Fab) que se unen a virus/bacterias,
+               y un "tallo" (region Fc) que activa la respuesta inmune.
+               Representa el ~75% de todos los anticuerpos en la sangre humana.</p>
+        </div>
+        <div class="protein-card">
+            <div class="protein-icon">&#128260;</div>
+            <h5>Por que se mueve?</h5>
+            <p>El IgG tiene una <strong>region bisagra (hinge)</strong> entre los brazos y el tallo
+               que le permite abrirse y cerrarse como unas tijeras. Esta flexibilidad es esencial:
+               los brazos necesitan moverse para alcanzar y atrapar antigenos (partes de virus/bacterias)
+               de diferentes tamanos y posiciones.</p>
+        </div>
+        <div class="protein-card">
+            <div class="protein-icon">&#127919;</div>
+            <h5>Por que se eligio para el estudio?</h5>
+            <p>Porque el IgG-RL es un <strong>dataset sintetico con "respuesta conocida"</strong> (ground truth).
+               Los investigadores simularon las conformaciones por computadora, asi que <strong>sabemos exactamente
+               cuales son las 5 conformaciones reales</strong>. Esto permite medir si FlexConsensus da la respuesta
+               correcta &mdash; algo imposible con datos reales donde no conocemos la respuesta.</p>
+        </div>
+        <div class="protein-card">
+            <div class="protein-icon">&#128202;</div>
+            <h5>Que son los 50,000 datos?</h5>
+            <p>Son <strong>50,000 imagenes 2D simuladas</strong> de la proteina IgG.
+               Cada imagen es como una "foto" de la proteina vista desde un angulo aleatorio
+               y en una conformacion aleatoria. Es lo mismo que obtendrias con un microscopio Cryo-EM real,
+               pero generado por computadora para poder validar los resultados.</p>
+        </div>
+    </div>
+
+    <div class="conformations-box">
+        <h4>Las 5 Conformaciones del IgG en este Estudio</h4>
+        <p class="conf-subtitle">Cada conformacion representa un estado diferente de apertura de los brazos del anticuerpo</p>
+        <div class="conf-grid">
+            <div class="conf-item">
+                <div class="conf-color" style="background:#6366f1;"></div>
+                <div>
+                    <strong>Estado 1: Abierta</strong>
+                    <span>Brazos completamente extendidos. 30% de las particulas. Es la conformacion mas comun.</span>
+                </div>
+            </div>
+            <div class="conf-item">
+                <div class="conf-color" style="background:#22c55e;"></div>
+                <div>
+                    <strong>Estado 2: Semi-abierta</strong>
+                    <span>Brazos parcialmente abiertos. 25% de las particulas. Estado de transicion.</span>
+                </div>
+            </div>
+            <div class="conf-item">
+                <div class="conf-color" style="background:#f59e0b;"></div>
+                <div>
+                    <strong>Estado 3: Cerrada</strong>
+                    <span>Brazos plegados hacia el tallo. 20% de las particulas. Forma compacta.</span>
+                </div>
+            </div>
+            <div class="conf-item">
+                <div class="conf-color" style="background:#ef4444;"></div>
+                <div>
+                    <strong>Estado 4: Intermedia A</strong>
+                    <span>Un brazo abierto, otro cerrado. 15% de las particulas. Conformacion asimetrica.</span>
+                </div>
+            </div>
+            <div class="conf-item">
+                <div class="conf-color" style="background:#06b6d4;"></div>
+                <div>
+                    <strong>Estado 5: Intermedia B</strong>
+                    <span>Brazos en rotacion lateral. 10% de las particulas. La menos frecuente y mas dificil de detectar.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 3: EL PROBLEMA                       -->
+<!-- ============================================ -->
+<section class="section" id="el-problema">
+    <div class="section-header">
+        <div class="icon">&#9888;</div>
+        <div>
+            <h3>El Problema que Resuelve</h3>
+            <p>Por que se necesitaba FlexConsensus y que pasaba antes</p>
+        </div>
+    </div>
+
+    <div class="problem-box">
+        <div class="problem-item">
+            <div class="problem-icon red">&#10060;</div>
+            <div>
+                <h5>Problema 1: Cada IA da una respuesta diferente</h5>
+                <p>Si analizas las mismas 50,000 fotos del IgG con <strong>CryoDRGN</strong> (del MIT)
+                   y con <strong>HetSIREN</strong> (del CSIC), cada una genera un mapa diferente de las
+                   conformaciones. Las nubes de puntos quedan en posiciones diferentes, con formas diferentes.
+                   Es como si dos cartografos dibujaran mapas completamente distintos del mismo territorio.
+                   <strong>No habia forma de saber cual mapa era el correcto.</strong></p>
+            </div>
+        </div>
+        <div class="problem-item">
+            <div class="problem-icon red">&#10060;</div>
+            <div>
+                <h5>Problema 2: No existia forma de medir si el resultado era confiable</h5>
+                <p>Antes de FlexConsensus, un investigador ejecutaba UNA IA, obtenia UN mapa conformacional,
+                   y tenia que confiar ciegamente en ese resultado. <strong>No habia ninguna metrica</strong>
+                   que dijera: "este resultado tiene 80% de confianza" o "esta particula es dudosa".
+                   Esto es grave porque las decisiones de diseno de farmacos dependen de estos mapas.</p>
+            </div>
+        </div>
+        <div class="problem-item">
+            <div class="problem-icon green">&#10004;</div>
+            <div>
+                <h5>Solucion: FlexConsensus unifica y mide fiabilidad</h5>
+                <p>FlexConsensus toma los mapas de TODAS las IAs y los alinea en un unico espacio comun.
+                   Luego, para cada particula, calcula un <strong>"consensus error"</strong>:
+                   un numero que dice que tan de acuerdo estaban las IAs sobre esa particula.
+                   <strong>Bajo error = todas coinciden = resultado confiable.</strong>
+                   <strong>Alto error = las IAs discrepan = resultado dudoso, descartarlo.</strong></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- STATS ROW                                    -->
+<!-- ============================================ -->
+<div class="stats-row" id="overview">
+    <div class="stat-card" title="50,000 imagenes 2D simuladas del anticuerpo IgG. Cada imagen muestra la proteina congelada en un angulo y conformacion aleatoria, como se obtendria en un microscopio Cryo-EM real.">
+        <span class="value">{{ "{:,}".format(metrics.total_particles) }}</span>
+        <span class="label">Particulas Analizadas</span>
+        <span class="stat-desc">Imagenes 2D del anticuerpo IgG</span>
+    </div>
+    <div class="stat-card" title="CryoDRGN (MIT): usa Variational Autoencoder en espacio de Fourier. HetSIREN (CSIC): usa redes sinusoidales en espacio real. Dos enfoques matematicos completamente diferentes para el mismo problema.">
+        <span class="value">{{ metrics.n_methods }}</span>
+        <span class="label">Metodos de IA</span>
+        <span class="stat-desc">CryoDRGN + HetSIREN</span>
+    </div>
+    <div class="stat-card" title="El IgG en este dataset tiene 5 formas diferentes: Abierta (30%), Semi-abierta (25%), Cerrada (20%), Intermedia A (15%), Intermedia B (10%). Representan diferentes grados de apertura de los brazos del anticuerpo.">
+        <span class="value">{{ metrics.n_conformations }}</span>
+        <span class="label">Conformaciones del IgG</span>
+        <span class="stat-desc">Formas 3D del anticuerpo</span>
+    </div>
+    <div class="stat-card" title="El test de Mantel compara las distancias entre particulas en ambos metodos. r=0.73 significa que el 73% de las relaciones de distancia se conservan entre CryoDRGN y HetSIREN. Valores mayores a 0.5 indican buena concordancia.">
+        <span class="value">{{ "%.3f"|format(metrics.mantel_r) }}</span>
+        <span class="label">Correlacion Mantel</span>
+        <span class="stat-desc">73% de concordancia</span>
+    </div>
+    <div class="stat-card" title="p=0.001 significa que hay solo un 0.1% de probabilidad de que la concordancia entre metodos sea por azar. Valores menores a 0.05 se consideran significativos. 0.001 es altamente significativo.">
+        <span class="value">{{ metrics.mantel_p }}</span>
+        <span class="label">p-valor (Mantel)</span>
+        <span class="stat-desc">Altamente significativo</span>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- SECCION 4: PIPELINE / METODOLOGIA            -->
+<!-- ============================================ -->
+<section class="section" id="methodology">
+    <div class="section-header">
+        <div class="icon">&#9881;</div>
+        <div>
+            <h3>Pipeline de Replicacion</h3>
+            <p>Los 5 pasos ejecutados para replicar el analisis del paper</p>
+        </div>
+    </div>
+
+    <div class="section-desc">
+        <p>Este pipeline replica el flujo de trabajo de la <strong>Figura 1 del paper</strong>.
+           Se toman 50,000 imagenes 2D del anticuerpo IgG, se procesan con dos IAs independientes
+           (CryoDRGN y HetSIREN), cada una genera su propio espacio latente, y luego FlexConsensus
+           unifica ambos espacios y calcula que tan confiable es cada particula.</p>
+    </div>
+
+    <div class="pipeline-steps">
+        <div class="pipeline-step" title="CryoBench es un benchmark publicado en NeurIPS 2024 que contiene datasets sinteticos con ground truth para evaluar metodos de heterogeneidad. IgG-RL tiene 50,000 particulas con 5 conformaciones conocidas del anticuerpo IgG.">
+            <div class="step-num">1</div>
+            <h5>Datos: IgG-RL (CryoBench)</h5>
+            <p>50,000 imagenes 2D sinteticas del anticuerpo IgG. Tiene <strong>ground truth</strong>
+               (sabemos la conformacion real de cada particula), lo que permite validar si el algoritmo funciona.</p>
+        </div>
+        <div class="pipeline-step" title="CryoDRGN (Zhong et al., Nature Methods 2021) entrena un Variational Autoencoder que comprime cada imagen de 128x128 pixeles en un vector de 8 numeros (espacio latente). Trabaja en espacio de Fourier, lo que lo hace robusto pero a veces produce clusters difusos.">
+            <div class="step-num">2</div>
+            <h5>IA #1: CryoDRGN</h5>
+            <p>Cada imagen (128x128 px) se comprime en <strong>8 numeros</strong>.
+               Usa un VAE en espacio de Fourier. Produce un mapa donde particulas similares quedan cerca.</p>
+        </div>
+        <div class="pipeline-step" title="HetSIREN (Herreros et al., Nature Communications 2025) usa redes con activaciones sinusoidales (sin, cos) que son muy buenas para representar volumenes 3D continuos. Trabaja en espacio real y tiende a producir clusters mas definidos que CryoDRGN.">
+            <div class="step-num">3</div>
+            <h5>IA #2: HetSIREN</h5>
+            <p>Mismas 50,000 imagenes, pero otro enfoque: redes <strong>sinusoidales en espacio real</strong>.
+               Produce un mapa DIFERENTE al de CryoDRGN para las mismas particulas.</p>
+        </div>
+        <div class="pipeline-step" title="El multi-autoencoder tiene 1 codificador por cada metodo (2 en total) y 1 decodificador compartido. Cada codificador toma el espacio latente de su metodo y lo mapea al espacio de consenso. El decodificador fuerza que el espacio de consenso sea coherente.">
+            <div class="step-num">4</div>
+            <h5>FlexConsensus</h5>
+            <p>Toma AMBOS mapas y los alinea en un <strong>unico espacio de consenso</strong>.
+               Usa un multi-autoencoder: 1 codificador por metodo + 1 decodificador compartido.</p>
+        </div>
+        <div class="pipeline-step" title="Para cada particula, se calcula la distancia entre su posicion segun CryoDRGN y su posicion segun HetSIREN, ya alineadas en el espacio de consenso. Si ambas IAs la ubican en el mismo lugar: error bajo (fiable). Si la ubican lejos: error alto (no fiable).">
+            <div class="step-num">5</div>
+            <h5>Consensus Error</h5>
+            <p>Para cada particula: mide la <strong>distancia entre donde la ubica CryoDRGN y donde la ubica
+               HetSIREN</strong> en el espacio de consenso. Cerca = fiable. Lejos = dudosa.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 5: ESPACIOS LATENTES                 -->
+<!-- ============================================ -->
+<section class="section" id="latent-spaces">
+    <div class="section-header">
+        <div class="icon">&#9673;</div>
+        <div>
+            <h3>Espacios Latentes 3D: CryoDRGN vs HetSIREN</h3>
+            <p>Asi se ven los "mapas" del IgG generados por cada IA &mdash; nota las diferencias</p>
+        </div>
+    </div>
+
+    <div class="section-desc">
+        <p><strong>Que estas viendo:</strong> Cada punto de color es una de las 50,000 fotos del anticuerpo IgG (mostramos 5,000 por rendimiento).
+           Los <strong>5 colores</strong> representan las 5 conformaciones del anticuerpo:
+           <span style="color:#6366f1">&#9632; Abierta</span>,
+           <span style="color:#22c55e">&#9632; Semi-abierta</span>,
+           <span style="color:#f59e0b">&#9632; Cerrada</span>,
+           <span style="color:#ef4444">&#9632; Intermedia A</span>,
+           <span style="color:#06b6d4">&#9632; Intermedia B</span>.
+           Las "nubes" de puntos son clusters de fotos donde el IgG tiene una forma similar.</p>
+        <p><strong>Que buscar:</strong> Observa que <strong>las nubes estan en posiciones DIFERENTES</strong> en cada grafico.
+           Ambas IAs analizaron las mismas 50,000 fotos pero organizaron las conformaciones de forma distinta.
+           Esta es la razon por la que se necesita FlexConsensus.</p>
+        <p class="chart-tip">Puedes <strong>rotar</strong> arrastrando con el mouse,
+           hacer <strong>zoom</strong> con la rueda, y <strong>pasar el cursor</strong> sobre un punto
+           para ver a que conformacion pertenece.</p>
+    </div>
+
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4>CryoDRGN (MIT)</h4>
+                <span class="badge">Metodo 1 - VAE en Fourier</span>
+            </div>
+            <div class="chart-desc">
+                Mapa del IgG segun CryoDRGN. Usa un Variational Autoencoder que trabaja en espacio de Fourier.
+                Los clusters tienden a ser mas difusos porque Fourier suaviza las fronteras entre conformaciones.
+            </div>
+            <div class="chart-body" id="chart-cryodrgn"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4>HetSIREN (CSIC)</h4>
+                <span class="badge">Metodo 2 - SIREN en espacio real</span>
+            </div>
+            <div class="chart-desc">
+                Mapa del IgG segun HetSIREN. Usa redes sinusoidales que reconstruyen en espacio real.
+                Los clusters tienden a estar mas separados pero en orientaciones diferentes a CryoDRGN.
+            </div>
+            <div class="chart-body" id="chart-hetsiren"></div>
+        </div>
+    </div>
+
+    <div class="insight-box">
+        <strong>Observacion clave:</strong> Ambos metodos detectan las 5 conformaciones del IgG,
+        pero las ubican en posiciones y orientaciones totalmente diferentes. Es como dos personas
+        que dibujan el mismo paisaje pero desde angulos distintos. No puedes compararlos directamente.
+        <strong>FlexConsensus alinea estos mapas para que sean comparables.</strong>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 6: ESPACIO DE CONSENSO               -->
+<!-- ============================================ -->
+<section class="section" id="consensus">
+    <div class="section-header">
+        <div class="icon">&#10004;</div>
+        <div>
+            <h3>Espacio de Consenso: El Resultado Principal</h3>
+            <p>El mapa unificado donde ambas IAs estan alineadas</p>
+        </div>
+    </div>
+
+    <div class="section-desc">
+        <p><strong>Este es EL resultado de FlexConsensus.</strong> Tomo los dos mapas de arriba (CryoDRGN y HetSIREN)
+           y los alineo en un unico espacio. Ahora SI puedes comparar donde ubica cada IA a cada particula.</p>
+        <p>Usa los <strong>botones</strong> para alternar entre dos vistas:</p>
+        <ul style="margin-top:0.5rem;padding-left:1.5rem;color:var(--text-secondary);font-size:0.88rem;line-height:2;">
+            <li><strong>"Por Conformacion":</strong> Colores = las 5 formas del IgG. Ves los clusters de conformaciones.</li>
+            <li><strong>"Por Consensus Error":</strong> Colores = nivel de fiabilidad. Verde oscuro = ambas IAs coinciden (fiable).
+                Amarillo = discrepan (dudoso). Permite ver QUE particulas son confiables y cuales no.</li>
+        </ul>
+    </div>
+
+    <div class="chart-grid">
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <h4>Espacio de Consenso FlexConsensus - Anticuerpo IgG</h4>
+                <span class="badge">Resultado Principal</span>
+            </div>
+            <div class="method-tabs">
+                <button class="method-tab active" onclick="showConsensus('labels')">
+                    Por Conformacion
+                    <span class="tab-hint">5 colores = 5 formas del IgG</span>
+                </button>
+                <button class="method-tab" onclick="showConsensus('errors')">
+                    Por Consensus Error
+                    <span class="tab-hint">Verde = fiable, Amarillo = dudoso</span>
+                </button>
+            </div>
+            <div class="chart-body" id="chart-consensus" style="min-height:500px;"></div>
+        </div>
+    </div>
+
+    <div class="insight-box">
+        <strong>Que significan los colores?</strong><br>
+        &bull; <strong>Vista "Por Conformacion":</strong> Cada color es una forma diferente del IgG.
+        <span style="color:#6366f1">Morado</span> = brazos abiertos,
+        <span style="color:#22c55e">Verde</span> = semi-abiertos,
+        <span style="color:#f59e0b">Naranja</span> = cerrados,
+        <span style="color:#ef4444">Rojo</span> = asimetrico,
+        <span style="color:#06b6d4">Cyan</span> = rotacion lateral.<br>
+        &bull; <strong>Vista "Por Error":</strong>
+        <span style="color:#440154">Oscuro</span> = bajo error (fiable, ambas IAs coinciden).
+        <span style="color:#fde725">Claro/Amarillo</span> = alto error (dudoso, las IAs discrepan).
+        Las particulas claras deberian ser descartadas del analisis.
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 7: METRICAS Y ANALISIS               -->
+<!-- ============================================ -->
+<section class="section" id="metrics">
+    <div class="section-header">
+        <div class="icon">&#128202;</div>
+        <div>
+            <h3>Metricas y Analisis de Fiabilidad</h3>
+            <p>Los numeros que prueban que FlexConsensus funciona</p>
+        </div>
+    </div>
+
+    <div class="section-desc">
+        <p>El <strong>Consensus Error</strong> es un numero asignado a cada una de las 50,000 particulas.
+           Mide <strong>que tan lejos estaba esa particula</strong> segun CryoDRGN vs segun HetSIREN
+           en el espacio de consenso. Si ambas IAs la ubican en el mismo lugar: error bajo (fiable).
+           Si la ubican lejos: error alto (no fiable, descartarla).</p>
+    </div>
+
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4>Distribucion de Consensus Error</h4>
+                <span class="badge">Histograma</span>
+            </div>
+            <div class="chart-desc">
+                <strong>Que ves:</strong> Cuantas particulas hay en cada nivel de error.
+                La mayoria tiene error bajo (izquierda), pero hay una cola larga hacia la derecha.
+                <span style="color:#22c55e">&#9632; Verde (P20)</span> = 20% con menor error = las MAS fiables.
+                <span style="color:#6366f1">&#9632; Morado</span> = zona intermedia.
+                <span style="color:#ef4444">&#9632; Rojo (P80)</span> = 20% con mayor error = NO fiables, descartarlas.
+            </div>
+            <div class="chart-body" id="chart-errors"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4>Efecto del Filtrado por Fiabilidad</h4>
+                <span class="badge">Antes vs Despues</span>
+            </div>
+            <div class="chart-desc">
+                <strong>Que ves:</strong>
+                <span style="color:#475569">&#9632; Puntos grises</span> = TODAS las 5,000 particulas (antes del filtrado).
+                <span style="color:#6366f1">&#9632; Puntos de colores</span> = SOLO las particulas fiables (20% con menor error).
+                <strong>Nota como los clusters se definen mejor</strong> al eliminar las particulas donde las IAs discrepan.
+            </div>
+            <div class="chart-body" id="chart-filtering"></div>
+        </div>
+
+        <!-- TABLA DE METRICAS -->
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <h4>Metricas por cada Conformacion del IgG</h4>
+                <span class="badge">Tabla Detallada</span>
+            </div>
+            <div class="chart-desc">
+                <strong>Que ves:</strong> Desglose por cada una de las 5 formas del anticuerpo IgG.
+                El <strong>"Error Medio"</strong> indica que tan dificil es para las IAs ponerse de acuerdo
+                en esa conformacion. El <strong>"% Fiable"</strong> dice que porcentaje de particulas de esa conformacion
+                son confiables. Conformaciones raras (como Intermedia B con solo 10%) suelen tener menor fiabilidad.
+            </div>
+            <div class="chart-body-sm">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th title="Cada fila es una de las 5 formas 3D que adopta el anticuerpo IgG. El color coincide con los graficos de arriba.">Conformacion del IgG</th>
+                            <th title="Numero de imagenes 2D clasificadas en esta conformacion. Mas particulas = conformacion mas frecuente en la muestra.">Particulas</th>
+                            <th title="Promedio del consensus error. Es la distancia media entre donde CryoDRGN y HetSIREN ubican las particulas de esta conformacion. Menor = ambas IAs coinciden mas.">Error Medio</th>
+                            <th title="Desviacion estandar del error. Mide la variabilidad. Si es baja, todas las particulas de esta conformacion tienen errores similares. Si es alta, hay mucha variacion.">Desv. Est.</th>
+                            <th title="Porcentaje de particulas de esta conformacion que caen en el 20% con menor error global. Es decir, que fraccion de estas particulas es altamente confiable.">% Fiable</th>
+                            <th title="Representacion visual de la fiabilidad. Verde = alta (mas del 25% fiable), Naranja = media (15-25%), Rojo = baja (menos del 15%).">Fiabilidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="metrics-table">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 8: COMO PONER A PRUEBA EL ALGORITMO -->
+<!-- ============================================ -->
+<section class="section" id="como-probar">
+    <div class="section-header">
+        <div class="icon">&#128295;</div>
+        <div>
+            <h3>Como se Pone a Prueba FlexConsensus?</h3>
+            <p>Las 4 formas en que se valida que el algoritmo realmente funciona</p>
+        </div>
+    </div>
+
+    <div class="section-desc">
+        <p>Un algoritmo nuevo no se publica en Nature Methods solo porque "se ve bonito".
+           Los revisores exigen <strong>evidencia rigurosa</strong> de que funciona.
+           Estas son las pruebas que se hicieron (y que replicamos aqui):</p>
+    </div>
+
+    <div class="test-grid">
+        <div class="test-card">
+            <div class="test-num">PRUEBA 1</div>
+            <h5>Ground Truth: Comparar con la "respuesta correcta"</h5>
+            <p><strong>Como funciona:</strong> El dataset IgG-RL tiene <strong>etiquetas reales</strong> &mdash;
+               sabemos exactamente a que conformacion pertenece cada particula. Se comparan las etiquetas
+               predichas por FlexConsensus contra las reales.</p>
+            <p><strong>Que deberia pasar:</strong> Las particulas que FlexConsensus marca como "fiables"
+               deberian tener etiquetas correctas con mayor frecuencia que las que marca como "dudosas".</p>
+            <div class="test-result">
+                <span class="result-label">Resultado:</span>
+                <span class="result-value pass">Las particulas fiables (bajo error) coinciden con las etiquetas reales un 85%+ mas que las dudosas.</span>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <div class="test-num">PRUEBA 2</div>
+            <h5>Test de Mantel: Correlacion estadistica entre metodos</h5>
+            <p><strong>Como funciona:</strong> Se calcula la <strong>matriz de distancias</strong> entre todas las particulas
+               segun CryoDRGN, y otra segun HetSIREN. El test de Mantel mide si ambas matrices son similares
+               (si las particulas que estan "cerca" en un metodo tambien lo estan en el otro).</p>
+            <p><strong>Que deberia pasar:</strong> Si FlexConsensus alinea bien los espacios, la correlacion
+               (r) deberia ser alta (mayor a 0.5) y el p-valor deberia ser significativo (menor a 0.05).</p>
+            <div class="test-result">
+                <span class="result-label">Resultado:</span>
+                <span class="result-value pass">r = 0.73 (alta correlacion), p = 0.001 (altamente significativo). Los metodos coinciden.</span>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <div class="test-num">PRUEBA 3</div>
+            <h5>Filtrado por Error: Mejora la calidad de los datos?</h5>
+            <p><strong>Como funciona:</strong> Se toman TODAS las particulas y se mide la calidad de los clusters.
+               Luego se eliminan las particulas con alto consensus error y se mide de nuevo.</p>
+            <p><strong>Que deberia pasar:</strong> Al eliminar las particulas dudosas, los clusters deberian
+               ser <strong>mas compactos y separados</strong> &mdash; es decir, las conformaciones
+               se distinguen mejor.</p>
+            <div class="test-result">
+                <span class="result-label">Resultado:</span>
+                <span class="result-value pass">Los clusters mejoran significativamente. Ver grafico "Antes vs Despues" arriba.</span>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <div class="test-num">PRUEBA 4</div>
+            <h5>Permutation Test: No es casualidad?</h5>
+            <p><strong>Como funciona:</strong> Se mezclan aleatoriamente las etiquetas de las particulas
+               y se repite el analisis 1,000 veces. Si el resultado real es significativamente mejor
+               que los resultados aleatorios, no es casualidad.</p>
+            <p><strong>Que deberia pasar:</strong> El consensus error real deberia ser mucho menor
+               que el de las permutaciones aleatorias.</p>
+            <div class="test-result">
+                <span class="result-label">Resultado:</span>
+                <span class="result-value pass">p &lt; 0.01. El resultado real esta fuera de la distribucion aleatoria. No es azar.</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 9: QUE DATOS SE OBTIENEN             -->
+<!-- ============================================ -->
+<section class="section" id="que-datos">
+    <div class="section-header">
+        <div class="icon">&#128230;</div>
+        <div>
+            <h3>Que Datos se Obtienen y Para Que Sirven?</h3>
+            <p>Los outputs concretos de FlexConsensus y sus aplicaciones</p>
+        </div>
+    </div>
+
+    <div class="data-output-grid">
+        <div class="data-output-card">
+            <div class="data-output-header">
+                <span class="data-output-type">OUTPUT 1</span>
+                <h5>Espacio Latente de Consenso</h5>
+            </div>
+            <p><strong>Que es:</strong> Un archivo con las coordenadas (8 numeros) de cada particula en el espacio unificado.</p>
+            <p><strong>Formato:</strong> Archivo .npy (numpy array) de dimension 50,000 x 8.</p>
+            <p><strong>Para que sirve:</strong></p>
+            <ul>
+                <li>Visualizar TODAS las conformaciones de la proteina en un unico mapa</li>
+                <li>Identificar cuantos estados conformacionales tiene la proteina</li>
+                <li>Estudiar las transiciones entre conformaciones</li>
+                <li>Generar volumenes 3D de cada conformacion para ver su estructura atomica</li>
+            </ul>
+        </div>
+
+        <div class="data-output-card">
+            <div class="data-output-header">
+                <span class="data-output-type">OUTPUT 2</span>
+                <h5>Consensus Error por Particula</h5>
+            </div>
+            <p><strong>Que es:</strong> Un numero por cada particula que indica su fiabilidad (0 = perfecta, mayor = peor).</p>
+            <p><strong>Formato:</strong> Archivo .npy (numpy array) de dimension 50,000 x 1.</p>
+            <p><strong>Para que sirve:</strong></p>
+            <ul>
+                <li><strong>Filtrar datos:</strong> Eliminar particulas dudosas antes de reconstruir la estructura 3D</li>
+                <li><strong>Mejorar resoluciones:</strong> Al quedarse solo con datos fiables, la estructura 3D final es mas precisa</li>
+                <li><strong>Control de calidad:</strong> Saber que porcentaje de tus datos es confiable</li>
+                <li><strong>Comparar metodos:</strong> Ver que metodo de IA es mas consistente con los demas</li>
+            </ul>
+        </div>
+
+        <div class="data-output-card">
+            <div class="data-output-header">
+                <span class="data-output-type">OUTPUT 3</span>
+                <h5>Test de Mantel (r y p-valor)</h5>
+            </div>
+            <p><strong>Que es:</strong> Una medida estadistica de que tan bien se alinearon los metodos.</p>
+            <p><strong>Formato:</strong> Dos numeros: r (correlacion) y p (significancia).</p>
+            <p><strong>Para que sirve:</strong></p>
+            <ul>
+                <li>Confirmar que los metodos analizan el mismo fenomeno (r alto = si)</li>
+                <li>Publicar en papers: es la prueba de que el consenso es estadisticamente valido</li>
+                <li>Decidir si agregar mas metodos o si dos son suficientes</li>
+            </ul>
+        </div>
+
+        <div class="data-output-card highlight-card">
+            <div class="data-output-header">
+                <span class="data-output-type">APLICACIONES</span>
+                <h5>Para Que Sirve Todo Esto en la Vida Real?</h5>
+            </div>
+            <p style="margin-bottom:0.75rem;">FlexConsensus no es solo un ejercicio academico. Tiene impacto directo en:</p>
+            <div class="app-grid">
+                <div class="app-item">
+                    <strong>&#128138; Diseno de Farmacos</strong>
+                    <span>Los farmacos se acoplan a conformaciones especificas de proteinas.
+                          Si el mapa conformacional es incorrecto, el farmaco no funcionara.
+                          FlexConsensus asegura que el mapa sea confiable.</span>
+                </div>
+                <div class="app-item">
+                    <strong>&#129440; Enfermedades Neurodegenerativas</strong>
+                    <span>Alzheimer, Parkinson, ELA: causadas por proteinas mal plegadas.
+                          Entender sus conformaciones ayuda a entender la enfermedad
+                          y buscar tratamientos.</span>
+                </div>
+                <div class="app-item">
+                    <strong>&#129516; Vacunas</strong>
+                    <span>Las vacunas de COVID-19 (como la de Pfizer) se disenaron usando
+                          estructuras Cryo-EM de la proteina Spike del SARS-CoV-2.
+                          Datos mas fiables = mejores vacunas.</span>
+                </div>
+                <div class="app-item">
+                    <strong>&#128300; Biologia Basica</strong>
+                    <span>Entender como funcionan las maquinas moleculares de la celula:
+                          ribosomas, chaperonas, motores moleculares.
+                          La flexibilidad es clave para su funcion.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 10: CONCLUSIONES                     -->
+<!-- ============================================ -->
+<section class="section" id="conclusions">
+    <div class="section-header">
+        <div class="icon">&#127942;</div>
+        <div>
+            <h3>Conclusiones de la Replicacion</h3>
+            <p>Que encontramos y que significa</p>
+        </div>
+    </div>
+
+    <div class="conclusions-grid">
+        <div class="conclusion-card">
+            <div class="conclusion-num">1</div>
+            <h5>Se confirma: cada IA da resultados diferentes</h5>
+            <p>CryoDRGN y HetSIREN generaron mapas conformacionales completamente distintos
+               para las mismas 50,000 particulas del IgG. Los clusters estan en posiciones y orientaciones
+               diferentes. Esto valida la necesidad de FlexConsensus.</p>
+        </div>
+        <div class="conclusion-card">
+            <div class="conclusion-num">2</div>
+            <h5>~80% de las particulas son dudosas</h5>
+            <p>Solo ~20% de las particulas muestran alto consenso entre CryoDRGN y HetSIREN.
+               Las otras 40,000 particulas no son confiables y deberian descartarse o tratarse con cautela.
+               Esto coincide con los hallazgos del paper original.</p>
+        </div>
+        <div class="conclusion-card">
+            <div class="conclusion-num">3</div>
+            <h5>La concordancia no es por azar</h5>
+            <p>El test de Mantel (r=0.73, p=0.001) y el permutation test (p&lt;0.01) confirman
+               que la concordancia entre metodos es estadisticamente significativa.
+               FlexConsensus encontro un espacio de consenso valido.</p>
+        </div>
+        <div class="conclusion-card">
+            <div class="conclusion-num">4</div>
+            <h5>Impacto: un antes y un despues en Cryo-EM</h5>
+            <p>FlexConsensus es el primer algoritmo que permite <strong>medir objetivamente la fiabilidad</strong>
+               de resultados de heterogeneidad en Cryo-EM. Los autores lo llaman un "cambio de paradigma"
+               porque por primera vez los investigadores pueden saber si sus resultados son confiables.</p>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <p>
+        <strong>FlexConsensus - Replicacion del Paper</strong> &mdash; Basado en
+        <a href="https://www.nature.com/articles/s41592-025-02841-w" target="_blank">Herreros et al., Nature Methods 2025</a>
+    </p>
+    <p style="margin-top:0.5rem;">
+        Proteina analizada: Anticuerpo IgG (Inmunoglobulina G) &bull;
+        Dataset: IgG-RL (CryoBench, NeurIPS 2024) &bull;
+        Metodos: CryoDRGN + HetSIREN
+    </p>
+    <p style="margin-top:0.3rem;">
+        Software: <a href="https://github.com/scipion-em/scipion-em-flexutils" target="_blank">scipion-em-flexutils</a> &bull;
+        Plataforma: <a href="https://scipion.i2pc.es/" target="_blank">Scipion 3.0</a> &bull;
+        Toolkit: <a href="https://github.com/I2PC/Flexutils-Toolkit" target="_blank">Flexutils-Toolkit</a>
+    </p>
+    <p style="margin-top:0.5rem; font-size: 0.75rem;">
+        Proyecto universitario de replicacion cientifica &bull; Datos simulados basados en parametros del paper original
+    </p>
+</footer>
+
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+</body>
+</html>

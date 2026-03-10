@@ -1,0 +1,84 @@
+# FlexConsensus - Conda Environment
+# Replicación de: Nature Methods, Volume 22, October 2025
+# DOI: 10.1038/s41592-025-02841-w
+#
+# Uso:
+#   conda env create -f environment.yml
+#   conda activate flexconsensus
+#
+# Requiere: NVIDIA GPU con CUDA 11.8+, Ubuntu 20.04+
+
+name: flexconsensus
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+
+dependencies:
+  # --- Python ---
+  - python=3.10
+
+  # --- Deep Learning: PyTorch (CryoDRGN) ---
+  - pytorch=2.1.2
+  - torchvision=0.16.2
+  - torchaudio=2.1.2
+  - pytorch-cuda=11.8
+
+  # --- Deep Learning: TensorFlow (Flexutils-Toolkit / HetSIREN / FlexConsensus) ---
+  - pip
+
+  # --- Ciencia / Cómputo ---
+  - numpy=1.24.4
+  - scipy=1.11.4
+  - scikit-learn=1.3.2
+  - pandas=2.1.4
+  - h5py=3.10.0
+
+  # --- Visualización ---
+  - matplotlib=3.8.2
+  - seaborn=0.13.1
+  - plotly=5.18.0
+
+  # --- Cryo-EM herramientas ---
+  - mrcfile=1.5.0
+  - starfile=0.5.6
+
+  # --- Estadística ---
+  - statsmodels=0.14.1
+
+  # --- Utilidades ---
+  - tqdm=4.66.1
+  - pyyaml=6.0.1
+  - jupyterlab=4.0.10
+  - tensorboard=2.15.1
+  - wget
+
+  # --- Web App ---
+  - flask=3.0.0
+  - gunicorn=21.2.0
+  - requests=2.31.0
+
+  # --- AWS/Deploy ---
+  - boto3=1.34.14
+  - awscli=1.32.14
+
+  # --- Paquetes pip (no disponibles en conda) ---
+  - pip:
+    # CryoDRGN
+    - cryodrgn==3.4.0
+    # TensorFlow con GPU
+    - tensorflow[and-cuda]==2.15.0
+    # Flexutils-Toolkit (instalación local)
+    - -e ./SOFTWARE/Flexutils-Toolkit
+    # Plugin Scipion Flexutils (instalación local)
+    - -e ./SOFTWARE/scipion-em-flexutils
+    # Herramientas adicionales Cryo-EM
+    - aspera-cli>=4.14
+    - gemmi>=0.6.4
+    # UMAP para visualización de espacios latentes
+    - umap-learn>=0.5.5
+    # Test de Mantel
+    - scikit-bio>=0.5.9
+    # Descarga de datos PDB/EMPIAR
+    - biotite>=0.40.0
