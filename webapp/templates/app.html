@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
 </head>
 <body>
 
@@ -62,26 +63,26 @@
             <div class="info-step">
                 <div class="step-circle">1</div>
                 <h5>Busca una proteina</h5>
-                <p>Conectado a <strong>RCSB PDB</strong>, la base de datos mas grande del mundo
-                   con mas de 200,000 estructuras de proteinas resueltas experimentalmente.</p>
+                <p>Elige cualquier proteina de la base de datos <strong>RCSB PDB</strong>
+                   (200,000+ estructuras). Puedes ver su estructura 3D real, rotarla y explorarla.</p>
             </div>
             <div class="info-step">
                 <div class="step-circle">2</div>
-                <h5>Selecciona y configura</h5>
-                <p>Elige la proteina, ajusta parametros: numero de particulas,
-                   metodos de IA a comparar, dimension del espacio latente.</p>
+                <h5>Le "tomamos fotos"</h5>
+                <p>Simulamos miles de imagenes 2D de la proteina congelada, como hace
+                   un microscopio Cryo-EM. Cada foto captura la proteina en una <strong>pose diferente</strong>.</p>
             </div>
             <div class="info-step">
                 <div class="step-circle">3</div>
-                <h5>Ejecuta el analisis</h5>
-                <p>FlexConsensus simula el pipeline completo: genera espacios latentes
-                   con CryoDRGN y HetSIREN, los alinea y calcula el consensus error.</p>
+                <h5>Dos IAs analizan las fotos</h5>
+                <p>CryoDRGN y HetSIREN (dos inteligencias artificiales) analizan las fotos por separado.
+                   Cada una agrupa las fotos segun la pose de la proteina.</p>
             </div>
             <div class="info-step">
                 <div class="step-circle">4</div>
-                <h5>Explora los resultados</h5>
-                <p>Graficos 3D interactivos, histogramas, tablas de metricas,
-                   comparacion antes/despues. Todo interactivo.</p>
+                <h5>FlexConsensus compara</h5>
+                <p>Compara ambas IAs y muestra: <strong>en que coinciden</strong> (resultado confiable) y
+                   <strong>en que no</strong> (resultado dudoso). Como una segunda opinion medica.</p>
             </div>
         </div>
     </div>
@@ -95,8 +96,23 @@
 
     <div class="protein-detail" id="protein-detail">
         <div class="protein-main">
-            <div class="protein-image-box">
-                <img id="protein-img" src="" alt="Estructura 3D">
+            <div class="protein-viewer-box">
+                <div class="viewer-tabs">
+                    <button class="vt-tab active" onclick="switchProteinView('3d', this)">Estructura 3D</button>
+                    <button class="vt-tab" onclick="switchProteinView('image', this)">Imagen Estatica</button>
+                </div>
+                <div id="protein-viewer-3d" class="protein-3d-container"></div>
+                <div id="protein-viewer-img" class="protein-img-container" style="display:none;">
+                    <img id="protein-img" src="" alt="Estructura 3D">
+                </div>
+                <div class="viewer-controls">
+                    <button onclick="viewer3dStyle('cartoon')" title="Cintas (forma general)">Cintas</button>
+                    <button onclick="viewer3dStyle('stick')" title="Atomos y enlaces">Atomos</button>
+                    <button onclick="viewer3dStyle('sphere')" title="Esferas (superficie)">Esferas</button>
+                    <button onclick="viewer3dStyle('line')" title="Esqueleto">Esqueleto</button>
+                    <button onclick="viewer3dSpin()" title="Rotar automaticamente">Rotar</button>
+                </div>
+                <div class="viewer-hint">Arrastra para rotar &bull; Scroll para zoom &bull; Click derecho para mover</div>
             </div>
             <div class="protein-info">
                 <div class="protein-pdb-id" id="protein-pdb-id"></div>
@@ -175,11 +191,26 @@
 
     <!-- PASO 1: Que proteina estamos analizando -->
     <div class="results-section">
-        <div class="rs-step-badge">PASO 1 &mdash; ENTRADA</div>
+        <div class="rs-step-badge">PASO 1 &mdash; LA PROTEINA</div>
         <div class="rs-header">
             <h3>Que proteina estamos analizando?</h3>
         </div>
         <div class="rs-explanation" id="explain-protein"></div>
+
+        <!-- 3D Protein Viewer in Results -->
+        <div class="results-protein-viewer">
+            <div class="rpv-viewer-col">
+                <div class="rpv-label">Estructura 3D real de la proteina</div>
+                <div id="results-viewer-3d" class="results-3d-container"></div>
+                <div class="viewer-controls results-controls">
+                    <button onclick="resultsViewer3dStyle('cartoon')">Cintas</button>
+                    <button onclick="resultsViewer3dStyle('stick')">Atomos</button>
+                    <button onclick="resultsViewer3dStyle('sphere')">Esferas</button>
+                    <button onclick="resultsViewerSpin()">Rotar</button>
+                </div>
+            </div>
+            <div class="rpv-explain-col" id="rpv-conformations-explain"></div>
+        </div>
     </div>
 
     <!-- Stats row -->

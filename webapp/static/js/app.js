@@ -10,6 +10,10 @@ const BASE_URL = window.location.pathname.replace(/\/+$/, '').replace(/\/(api|st
 
 let currentProtein = null;
 let currentAnalysis = null;
+let proteinViewer = null;    // 3Dmol viewer for protein detail page
+let resultsViewer = null;    // 3Dmol viewer for results page
+let isSpinning = false;
+let isResultsSpinning = false;
 
 // =============================================
 // VIEW MANAGEMENT
@@ -27,6 +31,93 @@ function showView(name) {
         status.innerHTML = currentProtein.pdb_id;
     } else {
         status.innerHTML = '';
+    }
+}
+
+// =============================================
+// 3D PROTEIN VIEWER (3Dmol.js)
+// =============================================
+function load3DViewer(containerId, pdbId) {
+    const container = document.getElementById(containerId);
+    if (!container) return null;
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:.85rem;">Cargando estructura 3D...</div>';
+
+    const viewer = $3Dmol.createViewer(container, {
+        backgroundColor: '#0d1117',
+        antialias: true,
+    });
+
+    const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
+    fetch(pdbUrl).then(r => {
+        if (!r.ok) throw new Error('PDB not found');
+        return r.text();
+    }).then(pdbData => {
+        viewer.addModel(pdbData, 'pdb');
+        viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+        viewer.zoomTo();
+        viewer.render();
+    }).catch(() => {
+        // Try mmCIF format
+        const cifUrl = `https://files.rcsb.org/download/${pdbId}.cif`;
+        fetch(cifUrl).then(r => r.text()).then(cifData => {
+            viewer.addModel(cifData, 'cif');
+            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+            viewer.zoomTo();
+            viewer.render();
+        }).catch(() => {
+            container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:.82rem;">No se pudo cargar la estructura 3D</div>';
+        });
+    });
+
+    return viewer;
+}
+
+function switchProteinView(mode, btnEl) {
+    document.querySelectorAll('.vt-tab').forEach(t => t.classList.remove('active'));
+    btnEl.classList.add('active');
+    const div3d = document.getElementById('protein-viewer-3d');
+    const divImg = document.getElementById('protein-viewer-img');
+    if (mode === '3d') {
+        div3d.style.display = '';
+        divImg.style.display = 'none';
+        if (proteinViewer) proteinViewer.resize();
+    } else {
+        div3d.style.display = 'none';
+        divImg.style.display = '';
+    }
+}
+
+function viewer3dStyle(style) {
+    if (!proteinViewer) return;
+    proteinViewer.setStyle({}, styleObj(style));
+    proteinViewer.render();
+}
+
+function viewer3dSpin() {
+    if (!proteinViewer) return;
+    isSpinning = !isSpinning;
+    proteinViewer.spin(isSpinning);
+}
+
+function resultsViewer3dStyle(style) {
+    if (!resultsViewer) return;
+    resultsViewer.setStyle({}, styleObj(style));
+    resultsViewer.render();
+}
+
+function resultsViewerSpin() {
+    if (!resultsViewer) return;
+    isResultsSpinning = !isResultsSpinning;
+    resultsViewer.spin(isResultsSpinning);
+}
+
+function styleObj(name) {
+    switch (name) {
+        case 'cartoon': return {cartoon: {color: 'spectrum'}};
+        case 'stick': return {stick: {colorscheme: 'Jmol'}};
+        case 'sphere': return {sphere: {colorscheme: 'Jmol', scale: 0.3}};
+        case 'line': return {line: {colorscheme: 'Jmol'}};
+        default: return {cartoon: {color: 'spectrum'}};
     }
 }
 
@@ -107,6 +198,10 @@ async function selectProtein(pdbId) {
         document.getElementById('protein-img').onerror = function() {
             this.src = `https://cdn.rcsb.org/images/structures/${pdbId.toLowerCase()}_assembly-1.jpeg`;
         };
+
+        // Load 3D viewer
+        proteinViewer = load3DViewer('protein-viewer-3d', pdbId);
+        isSpinning = false;
         document.getElementById('protein-pdb-id').textContent = p.pdb_id;
         document.getElementById('protein-title').textContent = p.title;
         document.getElementById('protein-molecule').textContent = p.molecule || '';
@@ -252,16 +347,52 @@ function renderResults(a) {
             </div>
         </div>`;
 
-    // PASO 1: Que proteina
+    // PASO 1: Que proteina - con analogia clara
     document.getElementById('explain-protein').innerHTML = `
-        <strong>Proteina seleccionada: ${name}</strong> (PDB: ${p.pdb_id})<br><br>
-        Se simularon <strong>${a.n_particles.toLocaleString()} imagenes 2D</strong> de esta proteina,
-        como si las hubieramos congelado con Cryo-EM y tomado fotos con un microscopio electronico.
-        Cada imagen captura la proteina en un angulo y <strong>conformacion</strong> (forma 3D) aleatoria.
-        <br><br>
-        <strong>Que buscamos:</strong> Descubrir cuantas conformaciones diferentes tiene <em>${name}</em>,
-        cuales son las mas comunes, y que tan confiables son esos resultados.
-        Para eso, usamos dos IAs independientes y luego FlexConsensus las compara.`;
+        <strong>Proteina: ${name}</strong> (PDB: ${p.pdb_id})<br><br>
+        <strong>Que es una proteina?</strong> Es una molecula 3D dentro de tus celulas que hace un trabajo especifico
+        (como una maquina molecular). A la izquierda puedes ver y rotar la estructura real de <em>${name}</em>.<br><br>
+        <strong>Por que cambia de forma?</strong> Las proteinas NO son rigidas. Se mueven, se abren, se cierran,
+        como una mano que puede estar abierta o cerrada. Cada forma diferente se llama <strong>"conformacion"</strong>.
+        Imagina que le tomas miles de fotos a una persona bailando: cada foto la captura en una pose diferente.
+        Eso es exactamente lo que hace Cryo-EM: <strong>congela</strong> la proteina en un instante y le toma una "foto" 2D.<br><br>
+        <strong>Que hicimos:</strong> Simulamos <strong>${a.n_particles.toLocaleString()} "fotos"</strong> de ${name}
+        en diferentes poses. Ahora dos IAs intentaran descubrir cuantas poses (conformaciones) diferentes hay
+        y cuales son las mas comunes.`;
+
+    // Load 3D viewer in results
+    resultsViewer = load3DViewer('results-viewer-3d', p.pdb_id);
+    isResultsSpinning = false;
+
+    // Build conformations explanation cards
+    let confCardsHtml = `
+        <div class="rpv-analogy-box">
+            <h5>Que son las "conformaciones" (Estado A, B, C...)?</h5>
+            <p>Imagina que ${name} es como una <strong>mano humana</strong>:<br>
+            &bull; <strong>Estado A</strong> = mano abierta (palma extendida)<br>
+            &bull; <strong>Estado B</strong> = mano cerrada (puno)<br>
+            &bull; <strong>Estado C</strong> = mano a medio cerrar<br><br>
+            Son la <strong>misma mano</strong>, pero en <strong>diferentes posiciones</strong>.
+            De la misma forma, ${name} es la misma proteina pero adopta ${a.n_conformations} formas diferentes.
+            FlexConsensus descubre cuantas formas existen y cuales son fiables.<br><br>
+            <strong>En los graficos 3D de abajo</strong>, cada puntito = una "foto" de ${name}.
+            Los puntos del mismo color = fotos donde la proteina tenia una forma similar (misma conformacion).
+            Los grupos de puntos (nubes de color) son las diferentes poses/formas.</p>
+        </div>`;
+
+    a.per_conformation.forEach((c, i) => {
+        const color = CONF_COLORS[i];
+        confCardsHtml += `
+            <div class="rpv-conf-card">
+                <h5><span class="conf-dot" style="background:${color}"></span>${c.name} &mdash; ${c.percentage}% de las fotos</h5>
+                <p>${c.n_particles.toLocaleString()} de las ${a.n_particles.toLocaleString()} imagenes muestran a ${name}
+                en esta forma. ${c.percentage > 30 ? 'Es la conformacion mas comun: la proteina pasa la mayor parte del tiempo en esta pose.' :
+                    c.percentage > 15 ? 'Es una conformacion frecuente.' :
+                    'Es una conformacion rara: la proteina adopta esta forma pocas veces.'}</p>
+            </div>`;
+    });
+
+    document.getElementById('rpv-conformations-explain').innerHTML = confCardsHtml;
 
     // Stats
     document.getElementById('results-stats').innerHTML = `
@@ -279,76 +410,77 @@ function renderResults(a) {
             <span class="rs-val">${a.latent_dim}</span><span class="rs-label">Dim. Latente</span></div>
     `;
 
-    // PASO 2: Dos IAs
+    // PASO 2: Dos IAs - analogia del doctor
     document.getElementById('explain-methods').innerHTML = `
-        Se procesaron las ${a.n_particles.toLocaleString()} imagenes de <strong>${name}</strong> con dos IAs independientes:
+        <strong>Analogia:</strong> Imagina que le das las ${a.n_particles.toLocaleString()} fotos de ${name} a <strong>dos doctores diferentes</strong>
+        y les pides: "Organicen estas fotos en grupos segun la pose de la proteina".<br><br>
         <ul>
-            <li><strong>CryoDRGN</strong> (grafico izquierdo): Usa un Variational Autoencoder que trabaja en espacio de Fourier.
-                Comprime cada imagen en ${a.latent_dim} numeros y genera un "mapa" donde imagenes de conformaciones similares quedan cerca.</li>
-            <li><strong>HetSIREN</strong> (grafico derecho): Usa redes neuronales sinusoidales que trabajan en espacio real.
-                Genera otro "mapa" DIFERENTE para las MISMAS ${a.n_particles.toLocaleString()} imagenes.</li>
+            <li><strong>CryoDRGN</strong> (izquierda): Es el primer "doctor" (una IA). Analiza las fotos a su manera
+                y las organiza en un mapa 3D donde fotos de poses similares quedan juntas.</li>
+            <li><strong>HetSIREN</strong> (derecha): Es el segundo "doctor" (otra IA diferente). Analiza las MISMAS fotos
+                pero con otro metodo, y crea su PROPIO mapa.</li>
         </ul>
-        <strong>Que ves:</strong> Cada punto de color = 1 imagen de ${name}. Los ${a.n_conformations} colores = ${a.n_conformations} conformaciones.
-        Las "nubes" de puntos son grupos de imagenes donde ${name} tiene una forma similar.
-        <strong>Rota</strong> con el mouse, <strong>zoom</strong> con la rueda.`;
+        <strong>Que ves en los graficos:</strong> Cada puntito de color = 1 foto de ${name}.
+        Los puntos del mismo color = fotos donde la proteina tenia la misma pose.
+        Nota que los dos mapas se ven DIFERENTES &mdash; cada IA los organizo a su manera.
+        <strong>Rota</strong> arrastrando el mouse, <strong>zoom</strong> con la rueda.`;
 
     // Charts
     render3D('chart-m1', a.method1, a.labels, 'CryoDRGN');
     render3D('chart-m2', a.method2, a.labels, 'HetSIREN');
 
     document.getElementById('insight-methods').innerHTML = `
-        <strong>Que se observa?</strong> Los dos graficos muestran las mismas ${a.n_particles.toLocaleString()} particulas de ${name}
-        pero <strong>organizadas de forma diferente</strong>. Los clusters (nubes) estan en posiciones distintas.
-        Esto demuestra que CryoDRGN y HetSIREN no coinciden: cada IA "interpreta" la flexibilidad de ${name} a su manera.
-        <strong>Por eso necesitamos FlexConsensus: para saber en que coinciden y en que no.</strong>`;
+        <strong>Problema:</strong> Los dos graficos muestran las mismas ${a.n_particles.toLocaleString()} fotos
+        pero <strong>organizadas de forma diferente</strong>. Es como si los dos doctores agruparan las fotos
+        de formas distintas. Entonces <strong>a quien le creemos?</strong>
+        Por eso existe FlexConsensus: <strong>compara ambas opiniones y se queda solo con lo que ambos doctores coinciden.</strong>`;
 
-    // PASO 3: Consenso
+    // PASO 3: Consenso - analogia de la junta medica
     document.getElementById('explain-consensus').innerHTML = `
-        FlexConsensus tomo los dos mapas de arriba y los <strong>alineo en un unico espacio</strong>.
-        Ahora cada particula de ${name} tiene una posicion comun donde ambas IAs estan de acuerdo.
-        <br><br>
-        <strong>Dos vistas disponibles:</strong>
+        FlexConsensus hace una <strong>"junta medica"</strong>: toma las opiniones de ambos doctores (CryoDRGN y HetSIREN)
+        y crea un <strong>diagnostico unificado</strong> donde ambos estan de acuerdo.<br><br>
+        <strong>Dos formas de ver el resultado:</strong>
         <ul>
-            <li><strong>"Por Conformacion"</strong>: Los ${a.n_conformations} colores son las ${a.n_conformations} formas diferentes de ${name}.
-                Puedes ver cuales son las mas comunes (clusters grandes) y cuales son raras (clusters chicos).</li>
-            <li><strong>"Por Consensus Error"</strong>: Los colores muestran la <strong>fiabilidad</strong>.
-                Verde oscuro = ambas IAs coinciden (fiable). Amarillo = discrepan (dudoso). Las particulas amarillas deberian descartarse.</li>
+            <li><strong>"Por Conformacion"</strong>: Cada color = una pose diferente de ${name}. Las nubes grandes = poses comunes.
+                Las nubes chicas = poses raras que la proteina adopta pocas veces.</li>
+            <li><strong>"Por Consensus Error"</strong>: Muestra <strong>donde los doctores coinciden y donde no</strong>.
+                <span style="color:#22c55e">Verde oscuro</span> = ambas IAs coinciden (resultado confiable).
+                <span style="color:#f59e0b">Amarillo</span> = discrepan (resultado dudoso, hay que descartarlo).</li>
         </ul>`;
 
     renderConsensus('labels');
 
     document.getElementById('insight-consensus').innerHTML = `
-        <strong>Que se ve?</strong> En ${name} se detectaron <strong>${a.n_conformations} conformaciones distintas</strong>.
-        La conformacion dominante es <strong>${dominant.name}</strong> con el ${dominant.percentage}% de las particulas
-        (${dominant.n_particles.toLocaleString()} imagenes).
+        <strong>Resultado:</strong> ${name} tiene <strong>${a.n_conformations} poses (conformaciones) diferentes</strong>.
+        La pose mas comun es <strong>${dominant.name}</strong> &mdash; el ${dominant.percentage}% de las fotos
+        (${dominant.n_particles.toLocaleString()} imagenes) muestran a la proteina en esa forma.
         <br><br>
-        Cambia a <strong>"Por Consensus Error"</strong> para ver cuales son fiables.
-        Las particulas en colores claros/amarillos son aquellas donde CryoDRGN y HetSIREN <strong>no se ponen de acuerdo</strong>
-        sobre la conformacion de ${name} &mdash; esos datos no son confiables.`;
+        Haz click en <strong>"Por Consensus Error"</strong> para ver en cuales fotos los dos doctores (IAs) coinciden
+        y en cuales no. Los puntos amarillos son fotos donde <strong>las IAs NO se ponen de acuerdo</strong> &mdash;
+        esos resultados no son confiables y deberian descartarse.`;
 
-    // PASO 4: Fiabilidad
+    // PASO 4: Fiabilidad - analogia de segunda opinion
     document.getElementById('explain-error').innerHTML = `
-        Para cada una de las ${a.n_particles.toLocaleString()} imagenes de ${name}, FlexConsensus calculo un
-        <strong>"consensus error"</strong>: la distancia entre donde la ubica CryoDRGN y donde la ubica HetSIREN en el espacio de consenso.
+        <strong>Analogia:</strong> Cuando dos doctores examinan la misma radiografia, a veces coinciden y a veces no.
+        El <strong>"consensus error"</strong> mide exactamente eso: <strong>que tanto coinciden las dos IAs sobre cada foto</strong>.<br><br>
         <ul>
-            <li><strong>Error bajo</strong> (verde en el histograma) = ambas IAs coinciden = <span class="highlight">resultado FIABLE</span></li>
-            <li><strong>Error alto</strong> (rojo en el histograma) = las IAs discrepan = <span class="highlight">resultado NO fiable, descartar</span></li>
+            <li><span style="color:#22c55e;font-weight:700">Verde</span> (error bajo) = ambas IAs dicen lo mismo = <strong>resultado CONFIABLE</strong></li>
+            <li><span style="color:#ef4444;font-weight:700">Rojo</span> (error alto) = las IAs se contradicen = <strong>resultado DUDOSO, hay que descartarlo</strong></li>
         </ul>
-        El grafico de la derecha muestra el efecto de quedarse <strong>solo con las particulas fiables</strong> (20% con menor error):
-        los clusters se definen mucho mejor, es decir, las conformaciones de ${name} se distinguen con mas claridad.`;
+        <strong>Grafico derecho:</strong> Muestra que pasa si nos quedamos <strong>solo con las fotos confiables</strong>
+        (el 20% con menor error). Los grupos se definen mucho mejor &mdash; las poses de ${name} se distinguen con mas claridad.`;
 
     renderHistogram(a);
     renderFiltering(a);
 
     document.getElementById('insight-error').innerHTML = `
         <strong>Resultado para ${name}:</strong>
-        De las ${a.n_particles.toLocaleString()} particulas, solo el <span class="${parseFloat(reliablePct) > 25 ? 'good' : 'warn'}">${reliablePct}%
-        (${a.filtering.n_filtered.toLocaleString()} particulas) son fiables</span>. Esto significa que el
-        <span class="bad">${unreliablePct}% restante</span> son dudosas porque CryoDRGN y HetSIREN no coinciden en esas particulas.
-        <br><br>
-        <strong>En la practica:</strong> Si un investigador usara solo CryoDRGN para estudiar ${name},
-        estaria trabajando con datos de los cuales <strong>solo ~${reliablePct}% son confiables</strong>.
-        FlexConsensus permite identificar y descartar el resto, mejorando la calidad del analisis.`;
+        De las ${a.n_particles.toLocaleString()} fotos, solo el <span class="${parseFloat(reliablePct) > 25 ? 'good' : 'warn'}">${reliablePct}%
+        (${a.filtering.n_filtered.toLocaleString()} fotos) son confiables</span>
+        (ambos "doctores" coinciden en esas). El <span class="bad">${unreliablePct}% restante son dudosas</span>.<br><br>
+        <strong>Por que importa:</strong> Si un investigador usara solo UNA IA para estudiar ${name},
+        <strong>no sabria que ~${unreliablePct}% de sus datos son poco confiables</strong>.
+        FlexConsensus es como pedir una segunda opinion medica: te dice en que confiar y que descartar.`;
 
     // PASO 5: Tabla
     document.getElementById('explain-table').innerHTML = `
@@ -358,57 +490,54 @@ function renderResults(a) {
 
     renderTable(a);
 
-    // CONCLUSIONES
+    // CONCLUSIONES - lenguaje simple
     document.getElementById('conclusions-box').innerHTML = `
         <div class="concl-card">
             <div class="concl-icon blue">&#128300;</div>
             <div>
-                <h5>${name} tiene ${a.n_conformations} conformaciones detectables</h5>
-                <p>FlexConsensus detecto ${a.n_conformations} formas 3D diferentes para esta proteina.
-                   La mas comun es ${dominant.name} (${dominant.percentage}% de las particulas).
-                   La menos comun es ${sorted[sorted.length-1].name} (${sorted[sorted.length-1].percentage}%).
-                   Esto indica que ${name} es una proteina con flexibilidad conformacional ${a.n_conformations > 4 ? 'alta' : a.n_conformations > 2 ? 'moderada' : 'baja'}.</p>
+                <h5>${name} adopta ${a.n_conformations} poses (formas) diferentes</h5>
+                <p>Como una mano que puede estar abierta, cerrada o a medio cerrar, ${name} tiene
+                   ${a.n_conformations} formas 3D diferentes. La pose mas comun es <strong>${dominant.name}</strong>
+                   (${dominant.percentage}% de las fotos). La mas rara es ${sorted[sorted.length-1].name}
+                   (${sorted[sorted.length-1].percentage}%). Esto significa que ${name} es una proteina
+                   ${a.n_conformations > 4 ? 'muy flexible (cambia mucho de forma)' : a.n_conformations > 2 ? 'moderadamente flexible' : 'bastante rigida'}.</p>
             </div>
         </div>
 
         <div class="concl-card">
             <div class="concl-icon ${mantelEmoji === 'good' ? 'green' : mantelEmoji === 'warn' ? 'yellow' : 'red'}">&#9989;</div>
             <div>
-                <h5>CryoDRGN y HetSIREN tienen concordancia ${mantelQuality} (r = ${a.mantel_r})</h5>
-                <p>El test de Mantel muestra una correlacion de ${a.mantel_r} con p = ${a.mantel_p}.
-                   Esto significa que ${a.mantel_r > 0.7
-                       ? 'ambas IAs detectan patrones MUY similares en ' + name + ', lo que da confianza en los resultados.'
+                <h5>Los dos "doctores" (IAs) ${a.mantel_r > 0.7 ? 'coinciden mucho' : a.mantel_r > 0.5 ? 'coinciden parcialmente' : 'discrepan bastante'} (r = ${a.mantel_r})</h5>
+                <p>${a.mantel_r > 0.7
+                       ? 'CryoDRGN y HetSIREN llegaron a conclusiones MUY similares sobre ' + name + '. Esto da mucha confianza en los resultados.'
                        : a.mantel_r > 0.5
-                       ? 'hay concordancia moderada: las IAs coinciden en lo general pero discrepan en detalles finos.'
-                       : 'las IAs discrepan significativamente, lo que sugiere que ' + name + ' es particularmente dificil de analizar.'}
-                   El p-valor de ${a.mantel_p} confirma que esta concordancia NO es por azar.</p>
+                       ? 'Las IAs coinciden en lo general pero discrepan en algunos detalles. Los resultados son razonablemente confiables.'
+                       : 'Las IAs no se ponen de acuerdo, lo que sugiere que ' + name + ' es particularmente dificil de analizar.'}
+                   El p-valor de ${a.mantel_p} confirma que esta coincidencia es real (no por casualidad).</p>
             </div>
         </div>
 
         <div class="concl-card">
             <div class="concl-icon ${parseFloat(reliablePct) > 25 ? 'green' : 'yellow'}">&#128202;</div>
             <div>
-                <h5>Solo el ${reliablePct}% de las particulas son fiables</h5>
-                <p>De las ${a.n_particles.toLocaleString()} imagenes procesadas, ${a.filtering.n_filtered.toLocaleString()} son confiables
-                   (ambas IAs coinciden). Las otras ${(a.filtering.n_all - a.filtering.n_filtered).toLocaleString()} particulas
-                   deberian descartarse.
-                   ${parseFloat(reliablePct) < 25
-                       ? 'Este porcentaje es bajo, lo que sugiere que ' + name + ' tiene regiones de alta flexibilidad donde las IAs no logran ponerse de acuerdo.'
-                       : 'Este es un porcentaje razonable que permite un analisis estructural robusto.'}
-                   La conformacion mas fiable es <strong>${best.name}</strong> (${best.reliable_pct}%) y la menos fiable
-                   es <strong>${worst.name}</strong> (${worst.reliable_pct}%).</p>
+                <h5>Solo el ${reliablePct}% de las fotos son confiables</h5>
+                <p>De las ${a.n_particles.toLocaleString()} fotos, solo ${a.filtering.n_filtered.toLocaleString()} son
+                   resultados en los que ambas IAs coinciden. Las otras ${(a.filtering.n_all - a.filtering.n_filtered).toLocaleString()} fotos
+                   deberian descartarse porque las IAs no se ponen de acuerdo.
+                   La pose mas confiable es <strong>${best.name}</strong> (${best.reliable_pct}%)
+                   y la menos confiable es <strong>${worst.name}</strong> (${worst.reliable_pct}%).</p>
             </div>
         </div>
 
         <div class="concl-card">
             <div class="concl-icon blue">&#128138;</div>
             <div>
-                <h5>Impacto practico para ${name}</h5>
-                <p>Sin FlexConsensus, un investigador que estudie ${name} con una sola IA no sabria que
-                   <strong>~${unreliablePct}% de sus datos son dudosos</strong>.
-                   Con FlexConsensus, puede filtrar esas particulas y quedarse solo con las fiables,
-                   obteniendo estructuras 3D mas precisas. Esto es critico si ${name} se usa como
-                   target para diseno de farmacos o para entender mecanismos biologicos.</p>
+                <h5>Para que sirve esto en la vida real?</h5>
+                <p>Sin FlexConsensus, un cientifico que estudie ${name} con una sola IA <strong>no sabria que
+                   ~${unreliablePct}% de sus datos son poco confiables</strong>. Es como un diagnostico medico
+                   sin segunda opinion. Con FlexConsensus, puede descartar los datos dudosos y quedarse solo
+                   con los confiables, obteniendo estructuras 3D mas precisas. Esto es fundamental para
+                   disenar medicamentos o entender como funciona ${name} en el cuerpo.</p>
             </div>
         </div>
     `;
