@@ -155,9 +155,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .results-summary-box{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.04));border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:1.5rem 2rem;display:flex;align-items:center;gap:2rem;overflow:hidden;}
 .rsb-icon{width:50px;height:50px;background:linear-gradient(135deg,var(--accent),#a78bfa);border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff;flex-shrink:0;}
 
-/* Ensure 3Dmol canvases stay inside their containers */
+/* Ensure 3Dmol stays inside its container */
 .protein-3d-container,.results-3d-container{position:relative;overflow:hidden;}
-.protein-3d-container canvas,.results-3d-container canvas,.protein-3d-container div,.results-3d-container div{max-width:100%!important;max-height:100%!important;}
 .rsb-info{flex:1;}
 .rsb-info h2{font-size:1.2rem;font-weight:700;margin-bottom:.25rem;}
 .rsb-info p{font-size:.85rem;color:var(--text2);}
