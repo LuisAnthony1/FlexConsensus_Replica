@@ -10,8 +10,8 @@ const BASE_URL = window.location.pathname.replace(/\/+$/, '').replace(/\/(api|st
 
 let currentProtein = null;
 let currentAnalysis = null;
-let proteinViewer = null;    // 3Dmol viewer for protein detail page
-let resultsViewer = null;    // 3Dmol viewer for results page
+let proteinViewer = null;
+let resultsViewer = null;
 let isSpinning = false;
 let isResultsSpinning = false;
 
@@ -23,7 +23,6 @@ function showView(name) {
     document.getElementById('view-' + name).classList.add('active');
     window.scrollTo(0, 0);
 
-    // Update nav status
     const status = document.getElementById('nav-status');
     if (name === 'results' && currentProtein) {
         status.innerHTML = `<span class="dot"></span> Analisis: ${currentProtein.pdb_id}`;
@@ -40,36 +39,55 @@ function showView(name) {
 function load3DViewer(containerId, pdbId) {
     const container = document.getElementById(containerId);
     if (!container) return null;
-    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:.85rem;">Cargando estructura 3D...</div>';
 
-    const viewer = $3Dmol.createViewer(container, {
-        backgroundColor: '#0d1117',
-        antialias: true,
-    });
+    // Clear and show loading
+    container.innerHTML = '';
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:.85rem;';
+    loadingDiv.textContent = 'Cargando estructura 3D...';
+    container.appendChild(loadingDiv);
 
-    const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
-    fetch(pdbUrl).then(r => {
-        if (!r.ok) throw new Error('PDB not found');
-        return r.text();
-    }).then(pdbData => {
-        viewer.addModel(pdbData, 'pdb');
-        viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
-        viewer.zoomTo();
-        viewer.render();
-    }).catch(() => {
-        // Try mmCIF format
-        const cifUrl = `https://files.rcsb.org/download/${pdbId}.cif`;
-        fetch(cifUrl).then(r => r.text()).then(cifData => {
-            viewer.addModel(cifData, 'cif');
-            viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
-            viewer.zoomTo();
-            viewer.render();
-        }).catch(() => {
-            container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:.82rem;">No se pudo cargar la estructura 3D</div>';
-        });
-    });
+    // Small delay to ensure container is rendered and has dimensions
+    setTimeout(() => {
+        container.innerHTML = '';
+        try {
+            const viewer = $3Dmol.createViewer(container, {
+                backgroundColor: '#0d1117',
+                antialias: true,
+            });
 
-    return viewer;
+            const pdbUrl = `https://files.rcsb.org/download/${pdbId}.pdb`;
+            fetch(pdbUrl).then(r => {
+                if (!r.ok) throw new Error('PDB not found');
+                return r.text();
+            }).then(pdbData => {
+                viewer.addModel(pdbData, 'pdb');
+                viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+                viewer.zoomTo();
+                viewer.render();
+                viewer.spin('y');
+                setTimeout(() => viewer.spin(false), 3000);
+            }).catch(() => {
+                const cifUrl = `https://files.rcsb.org/download/${pdbId}.cif`;
+                fetch(cifUrl).then(r => r.text()).then(cifData => {
+                    viewer.addModel(cifData, 'cif');
+                    viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+                    viewer.zoomTo();
+                    viewer.render();
+                    viewer.spin('y');
+                    setTimeout(() => viewer.spin(false), 3000);
+                }).catch(() => {
+                    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:.82rem;padding:1rem;text-align:center;">No se pudo cargar la estructura 3D.<br>Intenta con otra proteina.</div>';
+                });
+            });
+
+            // Store viewer reference
+            if (containerId === 'protein-viewer-3d') proteinViewer = viewer;
+            else if (containerId === 'results-viewer-3d') resultsViewer = viewer;
+        } catch (e) {
+            container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748b;font-size:.82rem;">Visor 3D no disponible</div>';
+        }
+    }, 300);
 }
 
 function switchProteinView(mode, btnEl) {
@@ -96,7 +114,7 @@ function viewer3dStyle(style) {
 function viewer3dSpin() {
     if (!proteinViewer) return;
     isSpinning = !isSpinning;
-    proteinViewer.spin(isSpinning);
+    proteinViewer.spin(isSpinning ? 'y' : false);
 }
 
 function resultsViewer3dStyle(style) {
@@ -108,7 +126,7 @@ function resultsViewer3dStyle(style) {
 function resultsViewerSpin() {
     if (!resultsViewer) return;
     isResultsSpinning = !isResultsSpinning;
-    resultsViewer.spin(isResultsSpinning);
+    resultsViewer.spin(isResultsSpinning ? 'y' : false);
 }
 
 function styleObj(name) {
@@ -175,7 +193,6 @@ async function searchProteins() {
     }
 }
 
-// Enter key
 document.getElementById('search-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') searchProteins();
 });
@@ -200,13 +217,12 @@ async function selectProtein(pdbId) {
         };
 
         // Load 3D viewer
-        proteinViewer = load3DViewer('protein-viewer-3d', pdbId);
+        load3DViewer('protein-viewer-3d', pdbId);
         isSpinning = false;
         document.getElementById('protein-pdb-id').textContent = p.pdb_id;
         document.getElementById('protein-title').textContent = p.title;
         document.getElementById('protein-molecule').textContent = p.molecule || '';
 
-        // Tags
         const tags = [];
         if (p.method) tags.push(p.method);
         if (p.organism) tags.push(p.organism);
@@ -214,7 +230,6 @@ async function selectProtein(pdbId) {
             `<span class="tag">${t}</span>`
         ).join('');
 
-        // Stats
         const res = p.resolution ? `${p.resolution.toFixed(2)} A` : 'N/A';
         document.getElementById('protein-stats').innerHTML = `
             <div class="ps-item"><span class="ps-val">${res}</span><span class="ps-label">Resolucion</span></div>
@@ -222,10 +237,9 @@ async function selectProtein(pdbId) {
             <div class="ps-item"><span class="ps-val">${p.seq_length||'N/A'}</span><span class="ps-label">Residuos</span></div>
         `;
 
-        // Links
         document.getElementById('protein-links').innerHTML = `
             <a href="${p.pdb_url}" target="_blank">Ver en RCSB PDB &#8599;</a>
-            <a href="${p.viewer_url}" target="_blank">Visor 3D &#8599;</a>
+            <a href="${p.viewer_url}" target="_blank">Visor 3D RCSB &#8599;</a>
         `;
 
         detail.style.opacity = '1';
@@ -243,10 +257,8 @@ async function runAnalysis() {
 
     const btn = document.getElementById('analyze-btn');
     btn.disabled = true;
-
     showView('loading');
 
-    // Animate loading steps
     const steps = [
         'Cargando estructura de ' + currentProtein.pdb_id + '...',
         'Simulando imagenes Cryo-EM (particulas 2D)...',
@@ -263,7 +275,6 @@ async function runAnalysis() {
         `<div class="ls-step" id="ls-${i}"><span class="ls-check">&#9711;</span> ${s}</div>`
     ).join('');
 
-    // Animate steps while waiting
     let stepIdx = 0;
     const stepInterval = setInterval(() => {
         if (stepIdx > 0) {
@@ -294,7 +305,6 @@ async function runAnalysis() {
         const analysis = await resp.json();
         currentAnalysis = analysis;
 
-        // Finish all steps
         clearInterval(stepInterval);
         for (let i = 0; i < steps.length; i++) {
             const el = document.getElementById(`ls-${i}`);
@@ -304,7 +314,6 @@ async function runAnalysis() {
         }
 
         await new Promise(r => setTimeout(r, 600));
-
         showView('results');
         renderResults(analysis);
     } catch (err) {
@@ -325,46 +334,42 @@ function renderResults(a) {
     const reliablePct = ((a.filtering.n_filtered / a.filtering.n_all) * 100).toFixed(1);
     const unreliablePct = (100 - parseFloat(reliablePct)).toFixed(1);
 
-    // Find best and worst conformations
     const sorted = [...a.per_conformation].sort((x,y) => y.reliable_pct - x.reliable_pct);
     const best = sorted[0];
     const worst = sorted[sorted.length - 1];
     const dominant = a.per_conformation.reduce((a,b) => a.percentage > b.percentage ? a : b);
 
-    // Mantel interpretation
     const mantelQuality = a.mantel_r > 0.7 ? 'alta' : a.mantel_r > 0.5 ? 'moderada' : 'baja';
     const mantelEmoji = a.mantel_r > 0.7 ? 'good' : a.mantel_r > 0.5 ? 'warn' : 'bad';
 
     // Summary
     document.getElementById('results-summary').innerHTML = `
         <div class="results-summary-box">
-            <img src="${p.image_url}" onerror="this.style.display='none'">
+            <img src="${p.image_url}" onerror="this.style.display='none'" alt="${p.pdb_id}">
             <div class="rsb-info">
                 <h2>${p.pdb_id} &mdash; ${name}</h2>
-                <p>Analisis FlexConsensus completado con exito. Se procesaron <strong>${a.n_particles.toLocaleString()} particulas</strong>,
+                <p>Analisis FlexConsensus completado. Se procesaron <strong>${a.n_particles.toLocaleString()} imagenes</strong>,
                    se detectaron <strong>${a.n_conformations} conformaciones</strong> y se comparo el consenso entre
-                   <strong>${a.n_methods} metodos de IA</strong>. Desplazate para ver los resultados paso a paso.</p>
+                   <strong>${a.n_methods} metodos de IA</strong>.</p>
             </div>
         </div>`;
 
-    // PASO 1: Que proteina - con analogia clara
+    // PASO 1: Proteina + visor 3D
     document.getElementById('explain-protein').innerHTML = `
         <strong>Proteina: ${name}</strong> (PDB: ${p.pdb_id})<br><br>
         <strong>Que es una proteina?</strong> Es una molecula 3D dentro de tus celulas que hace un trabajo especifico
-        (como una maquina molecular). A la izquierda puedes ver y rotar la estructura real de <em>${name}</em>.<br><br>
+        (como una maquina molecular). Abajo puedes ver y rotar la estructura real de <em>${name}</em>.<br><br>
         <strong>Por que cambia de forma?</strong> Las proteinas NO son rigidas. Se mueven, se abren, se cierran,
         como una mano que puede estar abierta o cerrada. Cada forma diferente se llama <strong>"conformacion"</strong>.
         Imagina que le tomas miles de fotos a una persona bailando: cada foto la captura en una pose diferente.
-        Eso es exactamente lo que hace Cryo-EM: <strong>congela</strong> la proteina en un instante y le toma una "foto" 2D.<br><br>
+        Eso es exactamente lo que hace Cryo-EM: <strong>congela</strong> la proteina y le toma una "foto" 2D.<br><br>
         <strong>Que hicimos:</strong> Simulamos <strong>${a.n_particles.toLocaleString()} "fotos"</strong> de ${name}
-        en diferentes poses. Ahora dos IAs intentaran descubrir cuantas poses (conformaciones) diferentes hay
-        y cuales son las mas comunes.`;
+        en diferentes poses. Dos IAs analizaran esas fotos para descubrir cuantas poses diferentes hay.`;
 
-    // Load 3D viewer in results
-    resultsViewer = load3DViewer('results-viewer-3d', p.pdb_id);
-    isResultsSpinning = false;
+    // Load 3D viewer in results (with delay for DOM)
+    setTimeout(() => load3DViewer('results-viewer-3d', p.pdb_id), 500);
 
-    // Build conformations explanation cards
+    // Conformations explanation cards
     let confCardsHtml = `
         <div class="rpv-analogy-box">
             <h5>Que son las "conformaciones" (Estado A, B, C...)?</h5>
@@ -374,10 +379,7 @@ function renderResults(a) {
             &bull; <strong>Estado C</strong> = mano a medio cerrar<br><br>
             Son la <strong>misma mano</strong>, pero en <strong>diferentes posiciones</strong>.
             De la misma forma, ${name} es la misma proteina pero adopta ${a.n_conformations} formas diferentes.
-            FlexConsensus descubre cuantas formas existen y cuales son fiables.<br><br>
-            <strong>En los graficos 3D de abajo</strong>, cada puntito = una "foto" de ${name}.
-            Los puntos del mismo color = fotos donde la proteina tenia una forma similar (misma conformacion).
-            Los grupos de puntos (nubes de color) son las diferentes poses/formas.</p>
+            FlexConsensus descubre cuantas formas existen y cuales son fiables.</p>
         </div>`;
 
     a.per_conformation.forEach((c, i) => {
@@ -385,10 +387,10 @@ function renderResults(a) {
         confCardsHtml += `
             <div class="rpv-conf-card">
                 <h5><span class="conf-dot" style="background:${color}"></span>${c.name} &mdash; ${c.percentage}% de las fotos</h5>
-                <p>${c.n_particles.toLocaleString()} de las ${a.n_particles.toLocaleString()} imagenes muestran a ${name}
-                en esta forma. ${c.percentage > 30 ? 'Es la conformacion mas comun: la proteina pasa la mayor parte del tiempo en esta pose.' :
-                    c.percentage > 15 ? 'Es una conformacion frecuente.' :
-                    'Es una conformacion rara: la proteina adopta esta forma pocas veces.'}</p>
+                <p>${c.n_particles.toLocaleString()} imagenes muestran a ${name}
+                en esta forma. ${c.percentage > 30 ? 'Es la pose mas comun.' :
+                    c.percentage > 15 ? 'Es una pose frecuente.' :
+                    'Es una pose rara.'}</p>
             </div>`;
     });
 
@@ -396,124 +398,102 @@ function renderResults(a) {
 
     // Stats
     document.getElementById('results-stats').innerHTML = `
-        <div class="rs-card" title="Imagenes 2D de Cryo-EM simuladas para ${name}">
-            <span class="rs-val">${a.n_particles.toLocaleString()}</span><span class="rs-label">Particulas</span></div>
-        <div class="rs-card" title="Formas 3D diferentes que adopta ${name}">
-            <span class="rs-val">${a.n_conformations}</span><span class="rs-label">Conformaciones</span></div>
-        <div class="rs-card" title="Concordancia entre CryoDRGN y HetSIREN: ${mantelQuality}">
-            <span class="rs-val">${a.mantel_r}</span><span class="rs-label">Mantel r</span></div>
-        <div class="rs-card" title="p=${a.mantel_p}: la concordancia NO es por azar">
-            <span class="rs-val">${a.mantel_p}</span><span class="rs-label">p-valor</span></div>
-        <div class="rs-card" title="De las ${a.n_particles.toLocaleString()} particulas, solo el ${reliablePct}% tiene bajo consensus error">
-            <span class="rs-val">${reliablePct}%</span><span class="rs-label">Fiables (P20)</span></div>
-        <div class="rs-card" title="Se comprimieron las imagenes de ${name} en ${a.latent_dim} numeros">
-            <span class="rs-val">${a.latent_dim}</span><span class="rs-label">Dim. Latente</span></div>
+        <div class="rs-card"><span class="rs-val">${a.n_particles.toLocaleString()}</span><span class="rs-label">Imagenes</span></div>
+        <div class="rs-card"><span class="rs-val">${a.n_conformations}</span><span class="rs-label">Poses detectadas</span></div>
+        <div class="rs-card"><span class="rs-val">${a.mantel_r}</span><span class="rs-label">Concordancia (Mantel r)</span></div>
+        <div class="rs-card"><span class="rs-val">${reliablePct}%</span><span class="rs-label">Fiables</span></div>
     `;
 
-    // PASO 2: Dos IAs - analogia del doctor
+    // PASO 2: Dos IAs (now 2D like the paper figures)
     document.getElementById('explain-methods').innerHTML = `
-        <strong>Analogia:</strong> Imagina que le das las ${a.n_particles.toLocaleString()} fotos de ${name} a <strong>dos doctores diferentes</strong>
-        y les pides: "Organicen estas fotos en grupos segun la pose de la proteina".<br><br>
+        <strong>Analogia:</strong> Le damos las ${a.n_particles.toLocaleString()} fotos de ${name} a <strong>dos doctores diferentes</strong>
+        y les pedimos: "Organicen estas fotos en grupos segun la pose de la proteina".<br><br>
         <ul>
-            <li><strong>CryoDRGN</strong> (izquierda): Es el primer "doctor" (una IA). Analiza las fotos a su manera
-                y las organiza en un mapa 3D donde fotos de poses similares quedan juntas.</li>
-            <li><strong>HetSIREN</strong> (derecha): Es el segundo "doctor" (otra IA diferente). Analiza las MISMAS fotos
-                pero con otro metodo, y crea su PROPIO mapa.</li>
+            <li><strong>CryoDRGN</strong> (izquierda): Primer "doctor". Organiza las fotos en su propio mapa.</li>
+            <li><strong>HetSIREN</strong> (derecha): Segundo "doctor". Organiza las MISMAS fotos de forma diferente.</li>
         </ul>
-        <strong>Que ves en los graficos:</strong> Cada puntito de color = 1 foto de ${name}.
-        Los puntos del mismo color = fotos donde la proteina tenia la misma pose.
-        Nota que los dos mapas se ven DIFERENTES &mdash; cada IA los organizo a su manera.
-        <strong>Rota</strong> arrastrando el mouse, <strong>zoom</strong> con la rueda.`;
+        <strong>Cada punto</strong> = 1 foto de ${name}. <strong>Cada color</strong> = una pose diferente.
+        Las etiquetas sobre el grafico indican donde esta cada grupo.
+        Nota que los dos mapas se ven <strong>DIFERENTES</strong> &mdash; cada IA los organizo a su manera.`;
 
-    // Charts
-    render3D('chart-m1', a.method1, a.labels, 'CryoDRGN');
-    render3D('chart-m2', a.method2, a.labels, 'HetSIREN');
+    // Render 2D scatter plots (like paper Figs 1-4)
+    renderSubspace('chart-m1', a.method1, a.labels, 'CryoDRGN');
+    renderSubspace('chart-m2', a.method2, a.labels, 'HetSIREN');
 
     document.getElementById('insight-methods').innerHTML = `
-        <strong>Problema:</strong> Los dos graficos muestran las mismas ${a.n_particles.toLocaleString()} fotos
-        pero <strong>organizadas de forma diferente</strong>. Es como si los dos doctores agruparan las fotos
-        de formas distintas. Entonces <strong>a quien le creemos?</strong>
-        Por eso existe FlexConsensus: <strong>compara ambas opiniones y se queda solo con lo que ambos doctores coinciden.</strong>`;
+        <strong>Problema:</strong> Los dos mapas muestran las mismas ${a.n_particles.toLocaleString()} fotos
+        pero <strong>organizadas diferente</strong>. Entonces <strong>a quien le creemos?</strong>
+        FlexConsensus compara ambas opiniones y se queda solo con lo que ambos coinciden.`;
 
-    // PASO 3: Consenso - analogia de la junta medica
+    // PASO 3: Consenso
     document.getElementById('explain-consensus').innerHTML = `
-        FlexConsensus hace una <strong>"junta medica"</strong>: toma las opiniones de ambos doctores (CryoDRGN y HetSIREN)
-        y crea un <strong>diagnostico unificado</strong> donde ambos estan de acuerdo.<br><br>
-        <strong>Dos formas de ver el resultado:</strong>
+        FlexConsensus hace una <strong>"junta medica"</strong>: toma las opiniones de ambos doctores (IAs)
+        y crea un <strong>mapa unificado</strong>.<br><br>
+        <strong>Tres vistas:</strong>
         <ul>
-            <li><strong>"Por Conformacion"</strong>: Cada color = una pose diferente de ${name}. Las nubes grandes = poses comunes.
-                Las nubes chicas = poses raras que la proteina adopta pocas veces.</li>
-            <li><strong>"Por Consensus Error"</strong>: Muestra <strong>donde los doctores coinciden y donde no</strong>.
-                <span style="color:#22c55e">Verde oscuro</span> = ambas IAs coinciden (resultado confiable).
-                <span style="color:#f59e0b">Amarillo</span> = discrepan (resultado dudoso, hay que descartarlo).</li>
+            <li><strong>"Por Conformacion"</strong>: Cada color = una pose de ${name}. Grupos grandes = poses comunes.</li>
+            <li><strong>"Por Error"</strong>: <span style="color:#22c55e">Verde</span> = ambas IAs coinciden (confiable).
+                <span style="color:#f59e0b">Amarillo/rojo</span> = discrepan (dudoso).</li>
+            <li><strong>"Subespacio"</strong>: Estilo del paper. Fondo gris = espacio comun. Colores = la vista de cada IA por separado.</li>
         </ul>`;
 
     renderConsensus('labels');
 
     document.getElementById('insight-consensus').innerHTML = `
-        <strong>Resultado:</strong> ${name} tiene <strong>${a.n_conformations} poses (conformaciones) diferentes</strong>.
-        La pose mas comun es <strong>${dominant.name}</strong> &mdash; el ${dominant.percentage}% de las fotos
-        (${dominant.n_particles.toLocaleString()} imagenes) muestran a la proteina en esa forma.
-        <br><br>
-        Haz click en <strong>"Por Consensus Error"</strong> para ver en cuales fotos los dos doctores (IAs) coinciden
-        y en cuales no. Los puntos amarillos son fotos donde <strong>las IAs NO se ponen de acuerdo</strong> &mdash;
-        esos resultados no son confiables y deberian descartarse.`;
+        <strong>Resultado:</strong> ${name} tiene <strong>${a.n_conformations} poses diferentes</strong>.
+        La mas comun es <strong>${dominant.name}</strong> (${dominant.percentage}%).
+        Usa los botones para ver la fiabilidad por error o el estilo del paper (subespacio).`;
 
-    // PASO 4: Fiabilidad - analogia de segunda opinion
+    // PASO 4: Fiabilidad
     document.getElementById('explain-error').innerHTML = `
         <strong>Analogia:</strong> Cuando dos doctores examinan la misma radiografia, a veces coinciden y a veces no.
-        El <strong>"consensus error"</strong> mide exactamente eso: <strong>que tanto coinciden las dos IAs sobre cada foto</strong>.<br><br>
+        El <strong>"consensus error"</strong> mide <strong>que tanto coinciden las dos IAs sobre cada foto</strong>.<br><br>
         <ul>
-            <li><span style="color:#22c55e;font-weight:700">Verde</span> (error bajo) = ambas IAs dicen lo mismo = <strong>resultado CONFIABLE</strong></li>
-            <li><span style="color:#ef4444;font-weight:700">Rojo</span> (error alto) = las IAs se contradicen = <strong>resultado DUDOSO, hay que descartarlo</strong></li>
+            <li><span style="color:#22c55e;font-weight:700">Verde</span> = ambas IAs coinciden = <strong>CONFIABLE</strong></li>
+            <li><span style="color:#ef4444;font-weight:700">Rojo</span> = las IAs se contradicen = <strong>DUDOSO</strong></li>
         </ul>
-        <strong>Grafico derecho:</strong> Muestra que pasa si nos quedamos <strong>solo con las fotos confiables</strong>
-        (el 20% con menor error). Los grupos se definen mucho mejor &mdash; las poses de ${name} se distinguen con mas claridad.`;
+        <strong>Derecha:</strong> Que pasa si nos quedamos solo con las fotos confiables (20% con menor error).
+        Los grupos se definen mejor.`;
 
     renderHistogram(a);
     renderFiltering(a);
 
     document.getElementById('insight-error').innerHTML = `
-        <strong>Resultado para ${name}:</strong>
-        De las ${a.n_particles.toLocaleString()} fotos, solo el <span class="${parseFloat(reliablePct) > 25 ? 'good' : 'warn'}">${reliablePct}%
-        (${a.filtering.n_filtered.toLocaleString()} fotos) son confiables</span>
-        (ambos "doctores" coinciden en esas). El <span class="bad">${unreliablePct}% restante son dudosas</span>.<br><br>
-        <strong>Por que importa:</strong> Si un investigador usara solo UNA IA para estudiar ${name},
-        <strong>no sabria que ~${unreliablePct}% de sus datos son poco confiables</strong>.
-        FlexConsensus es como pedir una segunda opinion medica: te dice en que confiar y que descartar.`;
+        <strong>Resultado:</strong> De las ${a.n_particles.toLocaleString()} fotos,
+        <span class="${parseFloat(reliablePct) > 25 ? 'good' : 'warn'}">${reliablePct}%
+        (${a.filtering.n_filtered.toLocaleString()}) son confiables</span>.
+        El <span class="bad">${unreliablePct}% restante son dudosas</span>.
+        FlexConsensus es como una segunda opinion medica: te dice en que confiar y que descartar.`;
 
     // PASO 5: Tabla
     document.getElementById('explain-table').innerHTML = `
-        Desglose por cada una de las <strong>${a.n_conformations} conformaciones</strong> de ${name}.
-        El <strong>"% Fiable"</strong> indica que fraccion de las particulas de esa conformacion son confiables.
-        Las conformaciones con pocas particulas (raras) suelen tener menor fiabilidad porque las IAs tienen menos datos para aprender.`;
+        Desglose por cada una de las <strong>${a.n_conformations} poses</strong> de ${name}.
+        El <strong>"% Fiable"</strong> indica que fraccion de las imagenes de esa pose son confiables.`;
 
     renderTable(a);
 
-    // CONCLUSIONES - lenguaje simple
+    // CONCLUSIONES
     document.getElementById('conclusions-box').innerHTML = `
         <div class="concl-card">
             <div class="concl-icon blue">&#128300;</div>
             <div>
-                <h5>${name} adopta ${a.n_conformations} poses (formas) diferentes</h5>
-                <p>Como una mano que puede estar abierta, cerrada o a medio cerrar, ${name} tiene
-                   ${a.n_conformations} formas 3D diferentes. La pose mas comun es <strong>${dominant.name}</strong>
-                   (${dominant.percentage}% de las fotos). La mas rara es ${sorted[sorted.length-1].name}
-                   (${sorted[sorted.length-1].percentage}%). Esto significa que ${name} es una proteina
-                   ${a.n_conformations > 4 ? 'muy flexible (cambia mucho de forma)' : a.n_conformations > 2 ? 'moderadamente flexible' : 'bastante rigida'}.</p>
+                <h5>${name} adopta ${a.n_conformations} poses diferentes</h5>
+                <p>La pose mas comun es <strong>${dominant.name}</strong> (${dominant.percentage}%).
+                   La mas rara es ${sorted[sorted.length-1].name} (${sorted[sorted.length-1].percentage}%).
+                   ${name} es una proteina ${a.n_conformations > 4 ? 'muy flexible' : a.n_conformations > 2 ? 'moderadamente flexible' : 'bastante rigida'}.</p>
             </div>
         </div>
 
         <div class="concl-card">
             <div class="concl-icon ${mantelEmoji === 'good' ? 'green' : mantelEmoji === 'warn' ? 'yellow' : 'red'}">&#9989;</div>
             <div>
-                <h5>Los dos "doctores" (IAs) ${a.mantel_r > 0.7 ? 'coinciden mucho' : a.mantel_r > 0.5 ? 'coinciden parcialmente' : 'discrepan bastante'} (r = ${a.mantel_r})</h5>
+                <h5>Las dos IAs ${a.mantel_r > 0.7 ? 'coinciden mucho' : a.mantel_r > 0.5 ? 'coinciden parcialmente' : 'discrepan'} (r = ${a.mantel_r})</h5>
                 <p>${a.mantel_r > 0.7
-                       ? 'CryoDRGN y HetSIREN llegaron a conclusiones MUY similares sobre ' + name + '. Esto da mucha confianza en los resultados.'
+                       ? 'CryoDRGN y HetSIREN llegaron a conclusiones muy similares. Resultados confiables.'
                        : a.mantel_r > 0.5
-                       ? 'Las IAs coinciden en lo general pero discrepan en algunos detalles. Los resultados son razonablemente confiables.'
-                       : 'Las IAs no se ponen de acuerdo, lo que sugiere que ' + name + ' es particularmente dificil de analizar.'}
-                   El p-valor de ${a.mantel_p} confirma que esta coincidencia es real (no por casualidad).</p>
+                       ? 'Coinciden en lo general pero discrepan en detalles. Razonablemente confiable.'
+                       : 'No se ponen de acuerdo. ' + name + ' es dificil de analizar.'}
+                   p-valor ${a.mantel_p} confirma que no es por azar.</p>
             </div>
         </div>
 
@@ -521,116 +501,189 @@ function renderResults(a) {
             <div class="concl-icon ${parseFloat(reliablePct) > 25 ? 'green' : 'yellow'}">&#128202;</div>
             <div>
                 <h5>Solo el ${reliablePct}% de las fotos son confiables</h5>
-                <p>De las ${a.n_particles.toLocaleString()} fotos, solo ${a.filtering.n_filtered.toLocaleString()} son
-                   resultados en los que ambas IAs coinciden. Las otras ${(a.filtering.n_all - a.filtering.n_filtered).toLocaleString()} fotos
-                   deberian descartarse porque las IAs no se ponen de acuerdo.
-                   La pose mas confiable es <strong>${best.name}</strong> (${best.reliable_pct}%)
-                   y la menos confiable es <strong>${worst.name}</strong> (${worst.reliable_pct}%).</p>
+                <p>De ${a.n_particles.toLocaleString()} fotos, ${a.filtering.n_filtered.toLocaleString()} son confiables.
+                   Pose mas confiable: <strong>${best.name}</strong> (${best.reliable_pct}%).
+                   Menos confiable: <strong>${worst.name}</strong> (${worst.reliable_pct}%).</p>
             </div>
         </div>
 
         <div class="concl-card">
             <div class="concl-icon blue">&#128138;</div>
             <div>
-                <h5>Para que sirve esto en la vida real?</h5>
-                <p>Sin FlexConsensus, un cientifico que estudie ${name} con una sola IA <strong>no sabria que
-                   ~${unreliablePct}% de sus datos son poco confiables</strong>. Es como un diagnostico medico
-                   sin segunda opinion. Con FlexConsensus, puede descartar los datos dudosos y quedarse solo
-                   con los confiables, obteniendo estructuras 3D mas precisas. Esto es fundamental para
-                   disenar medicamentos o entender como funciona ${name} en el cuerpo.</p>
+                <h5>Para que sirve esto?</h5>
+                <p>Sin FlexConsensus, un cientifico no sabria que <strong>~${unreliablePct}% de sus datos son dudosos</strong>.
+                   Con FlexConsensus puede descartar lo dudoso y quedarse con lo confiable.
+                   Fundamental para disenar medicamentos o entender como funciona ${name}.</p>
             </div>
         </div>
     `;
 }
 
 // =============================================
-// CHART HELPERS
+// CHART HELPERS - Paper-style 2D scatter plots
 // =============================================
-const LAYOUT_3D = {
+const LAYOUT_2D = {
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     font:{family:'Inter',color:DARK.text,size:11},
-    margin:{l:0,r:0,t:10,b:0},
-    scene:{
-        xaxis:{gridcolor:DARK.grid,zerolinecolor:DARK.grid,title:{text:'Dim 1',font:{size:10}},backgroundcolor:DARK.bg},
-        yaxis:{gridcolor:DARK.grid,zerolinecolor:DARK.grid,title:{text:'Dim 2',font:{size:10}},backgroundcolor:DARK.bg},
-        zaxis:{gridcolor:DARK.grid,zerolinecolor:DARK.grid,title:{text:'Dim 3',font:{size:10}},backgroundcolor:DARK.bg},
-        bgcolor:DARK.bg,
-        camera:{eye:{x:1.5,y:1.5,z:1.2}},
-    },
+    margin:{l:50,r:20,t:30,b:50},
+    xaxis:{title:{text:'Dimension 1',font:{size:10}},gridcolor:DARK.grid,zerolinecolor:DARK.grid},
+    yaxis:{title:{text:'Dimension 2',font:{size:10}},gridcolor:DARK.grid,zerolinecolor:DARK.grid},
     showlegend:true,
-    legend:{
-        x:0.01,y:0.99,
-        bgcolor:'rgba(26,34,54,.85)',
-        bordercolor:DARK.grid,
-        borderwidth:1,
-        font:{size:11,color:DARK.text},
-        itemsizing:'constant',
-    },
+    legend:{x:0.01,y:0.99,bgcolor:'rgba(26,34,54,.85)',bordercolor:DARK.grid,borderwidth:1,font:{size:10,color:DARK.text}},
 };
 const PCONFIG = {displayModeBar:true,displaylogo:false,responsive:true};
 
-function render3D(containerId, data, labels, methodName) {
-    // Separar cada conformación en un trace independiente con su leyenda
+// Calculate cluster centers for annotations
+function clusterCenters(data, labels) {
+    const centers = {};
+    const counts = {};
+    labels.forEach((l, i) => {
+        if (!centers[l]) { centers[l] = {x:0,y:0}; counts[l] = 0; }
+        centers[l].x += data.x[i];
+        centers[l].y += data.y[i];
+        counts[l]++;
+    });
+    Object.keys(centers).forEach(l => {
+        centers[l].x /= counts[l];
+        centers[l].y /= counts[l];
+    });
+    return centers;
+}
+
+// Paper-style 2D subspace plot with labeled clusters
+function renderSubspace(containerId, data, labels, methodName) {
     const uniqueLabels = [...new Set(labels)].sort((a,b)=>a-b);
+    const centers = clusterCenters(data, labels);
+
     const traces = uniqueLabels.map(label => {
-        const mask = labels.map((l,i)=>l===label?i:null).filter(i=>i!==null);
+        const mask = labels.map((l,i) => l===label ? i : null).filter(i => i!==null);
         return {
-            type:'scatter3d', mode:'markers',
+            type:'scatter', mode:'markers',
             name: CONF_NAMES[label],
-            x: mask.map(i=>data.x[i]),
-            y: mask.map(i=>data.y[i]),
-            z: mask.map(i=>data.z[i]),
-            marker:{size:2.5, color:CONF_COLORS[label], opacity:.7},
-            hovertemplate:`<b>${methodName} — ${CONF_NAMES[label]}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>${CONF_NAMES[label]}</extra>`,
-            legendgroup: CONF_NAMES[label],
+            x: mask.map(i => data.x[i]),
+            y: mask.map(i => data.y[i]),
+            marker:{size:3, color:CONF_COLORS[label], opacity:.6},
+            hovertemplate:`<b>${methodName} - ${CONF_NAMES[label]}</b><br>(%{x:.2f}, %{y:.2f})<extra></extra>`,
         };
     });
-    Plotly.newPlot(containerId, traces, LAYOUT_3D, PCONFIG);
+
+    // Add cluster center labels as annotations
+    const annotations = uniqueLabels.map(label => ({
+        x: centers[label].x,
+        y: centers[label].y,
+        text: `<b>${CONF_NAMES[label]}</b>`,
+        showarrow: false,
+        font: {size: 12, color: '#fff', family: 'Inter'},
+        bgcolor: CONF_COLORS[label],
+        borderpad: 4,
+        bordercolor: CONF_COLORS[label],
+        borderwidth: 1,
+        opacity: 0.9,
+    }));
+
+    const layout = {
+        ...LAYOUT_2D,
+        title:{text:methodName,font:{size:13,color:DARK.text},x:0.5},
+        annotations,
+    };
+
+    Plotly.newPlot(containerId, traces, layout, PCONFIG);
 }
 
 function renderConsensus(colorBy, btnEl) {
     if (!currentAnalysis) return;
     const a = currentAnalysis;
 
-    // Update tabs
     if (btnEl) {
         document.querySelectorAll('.c-tab').forEach(t=>t.classList.remove('active'));
         btnEl.classList.add('active');
     }
 
-    const isLabels = colorBy === 'labels';
-    const consensusLayout = {...LAYOUT_3D, margin:{l:0,r:0,t:20,b:0}};
-
-    if (isLabels) {
-        // Por conformación: un trace por cada conformación con leyenda
+    if (colorBy === 'labels') {
+        // Paper Fig 3/4 style: colored by conformation
         const uniqueLabels = [...new Set(a.labels)].sort((x,y)=>x-y);
+        const centers = clusterCenters(a.consensus, a.labels);
+
         const traces = uniqueLabels.map(label => {
-            const mask = a.labels.map((l,i)=>l===label?i:null).filter(i=>i!==null);
+            const mask = a.labels.map((l,i) => l===label ? i : null).filter(i => i!==null);
             return {
-                type:'scatter3d', mode:'markers',
+                type:'scatter', mode:'markers',
                 name: CONF_NAMES[label],
-                x: mask.map(i=>a.consensus.x[i]),
-                y: mask.map(i=>a.consensus.y[i]),
-                z: mask.map(i=>a.consensus.z[i]),
-                marker:{size:2.5, color:CONF_COLORS[label], opacity:.7},
-                hovertemplate:`<b>Consenso — ${CONF_NAMES[label]}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>${CONF_NAMES[label]}</extra>`,
+                x: mask.map(i => a.consensus.x[i]),
+                y: mask.map(i => a.consensus.y[i]),
+                marker:{size:3.5, color:CONF_COLORS[label], opacity:.6},
+                hovertemplate:`<b>${CONF_NAMES[label]}</b><br>(%{x:.2f}, %{y:.2f})<extra></extra>`,
             };
         });
-        Plotly.newPlot('chart-consensus', traces, consensusLayout, PCONFIG);
-    } else {
-        // Por error: colorscale continua
+
+        const annotations = uniqueLabels.map(label => ({
+            x: centers[label].x, y: centers[label].y,
+            text: `<b>${CONF_NAMES[label]}</b>`,
+            showarrow: false,
+            font:{size:12,color:'#fff',family:'Inter'},
+            bgcolor:CONF_COLORS[label], borderpad:4, bordercolor:CONF_COLORS[label], borderwidth:1, opacity:0.9,
+        }));
+
+        Plotly.newPlot('chart-consensus', traces, {
+            ...LAYOUT_2D,
+            margin:{l:50,r:20,t:40,b:50},
+            title:{text:'Espacio de Consenso FlexConsensus',font:{size:13,color:DARK.text},x:0.5},
+            annotations,
+        }, PCONFIG);
+
+    } else if (colorBy === 'errors') {
+        // Error heatmap style
         Plotly.newPlot('chart-consensus', [{
-            type:'scatter3d', mode:'markers',
-            x:a.consensus.x, y:a.consensus.y, z:a.consensus.z,
+            type:'scatter', mode:'markers',
+            x:a.consensus.x, y:a.consensus.y,
             marker:{
-                size:2.5, color:a.errors, opacity:.7,
-                colorscale:'Viridis',
+                size:3.5, color:a.errors, opacity:.7,
+                colorscale:[[0,'#22c55e'],[0.3,'#06b6d4'],[0.6,'#f59e0b'],[1,'#ef4444']],
                 colorbar:{title:{text:'Error',font:{size:10,color:DARK.text}},tickfont:{color:DARK.text,size:9},thickness:15,len:.6},
             },
-            hovertemplate:'<b>Error: %{marker.color:.4f}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra>Bajo = fiable, Alto = dudoso</extra>',
-            text:a.labels.map(l=>CONF_NAMES[l]),
+            hovertemplate:'<b>Error: %{marker.color:.4f}</b><br>(%{x:.2f}, %{y:.2f})<extra>Verde = fiable, Rojo = dudoso</extra>',
             showlegend:false,
-        }], {...consensusLayout, showlegend:false}, PCONFIG);
+        }], {
+            ...LAYOUT_2D,
+            margin:{l:50,r:60,t:40,b:50},
+            title:{text:'Consensus Error (verde=fiable, rojo=dudoso)',font:{size:13,color:DARK.text},x:0.5},
+            showlegend:false,
+        }, PCONFIG);
+
+    } else if (colorBy === 'subspace') {
+        // Paper style: gray common space + colored subspace per method
+        const traces = [
+            // Gray background - all consensus points
+            {
+                type:'scatter', mode:'markers',
+                name:'Espacio comun (gris)',
+                x:a.consensus.x, y:a.consensus.y,
+                marker:{size:3, color:'#475569', opacity:.2},
+                hoverinfo:'skip',
+            },
+            // CryoDRGN subspace colored on top
+            {
+                type:'scatter', mode:'markers',
+                name:'CryoDRGN subespacio',
+                x:a.method1.x, y:a.method1.y,
+                marker:{size:3.5, color:'#6366f1', opacity:.5},
+                hovertemplate:'<b>CryoDRGN</b><br>(%{x:.2f}, %{y:.2f})<extra></extra>',
+            },
+            // HetSIREN subspace colored on top
+            {
+                type:'scatter', mode:'markers',
+                name:'HetSIREN subespacio',
+                x:a.method2.x, y:a.method2.y,
+                marker:{size:3.5, color:'#22c55e', opacity:.5},
+                hovertemplate:'<b>HetSIREN</b><br>(%{x:.2f}, %{y:.2f})<extra></extra>',
+            },
+        ];
+
+        Plotly.newPlot('chart-consensus', traces, {
+            ...LAYOUT_2D,
+            margin:{l:50,r:20,t:40,b:50},
+            title:{text:'Subespacios (estilo paper Fig. 3-4)',font:{size:13,color:DARK.text},x:0.5},
+        }, PCONFIG);
     }
 }
 
@@ -642,13 +695,13 @@ function renderHistogram(a) {
     Plotly.newPlot('chart-histogram', [{
         type:'bar', x:barX, y:h.counts,
         marker:{color:barX.map(x=>x<h.p20?'#22c55e':x<h.p80?'#6366f1':'#ef4444'),opacity:.85},
-        hovertemplate:'<b>Error: %{x:.4f}</b><br>Particulas: %{y:,}<extra></extra>',
+        hovertemplate:'<b>Error: %{x:.4f}</b><br>Imagenes: %{y:,}<extra></extra>',
     }], {
         paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
         font:{family:'Inter',color:DARK.text,size:11},
         margin:{l:55,r:20,t:20,b:55},
         xaxis:{title:{text:'Consensus Error',font:{size:11}},gridcolor:DARK.grid,zerolinecolor:DARK.grid},
-        yaxis:{title:{text:'Particulas',font:{size:11}},gridcolor:DARK.grid,zerolinecolor:DARK.grid},
+        yaxis:{title:{text:'Imagenes',font:{size:11}},gridcolor:DARK.grid,zerolinecolor:DARK.grid},
         shapes:[
             {type:'line',x0:h.p20,x1:h.p20,y0:0,y1:maxC*1.1,line:{color:'#22c55e',width:2,dash:'dash'}},
             {type:'line',x0:h.p80,x1:h.p80,y0:0,y1:maxC*1.1,line:{color:'#ef4444',width:2,dash:'dash'}},
@@ -663,15 +716,38 @@ function renderHistogram(a) {
 
 function renderFiltering(a) {
     const f = a.filtering;
+
+    // Calculate centers for annotations on filtered data
+    const filteredCenters = {};
+    const filteredCounts = {};
+    f.filtered_labels.forEach((l, i) => {
+        if (!filteredCenters[l]) { filteredCenters[l] = {x:0,y:0}; filteredCounts[l] = 0; }
+        filteredCenters[l].x += f.filtered_x[i];
+        filteredCenters[l].y += f.filtered_y[i];
+        filteredCounts[l]++;
+    });
+    Object.keys(filteredCenters).forEach(l => {
+        filteredCenters[l].x /= filteredCounts[l];
+        filteredCenters[l].y /= filteredCounts[l];
+    });
+
+    const annotations = Object.keys(filteredCenters).map(l => ({
+        x: filteredCenters[l].x, y: filteredCenters[l].y,
+        text: `<b>${CONF_NAMES[l]}</b>`,
+        showarrow: false,
+        font:{size:10,color:'#fff',family:'Inter'},
+        bgcolor:CONF_COLORS[l], borderpad:3, bordercolor:CONF_COLORS[l], borderwidth:1, opacity:0.85,
+    }));
+
     Plotly.newPlot('chart-filter', [
         {type:'scatter',mode:'markers',x:f.all_x,y:f.all_y,
-         marker:{color:'#475569',size:2.5,opacity:.25},
+         marker:{color:'#475569',size:2.5,opacity:.2},
          name:`Todas (${f.n_all.toLocaleString()})`,
-         hovertemplate:'Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<extra>Sin filtrar</extra>'},
+         hoverinfo:'skip'},
         {type:'scatter',mode:'markers',x:f.filtered_x,y:f.filtered_y,
          marker:{color:f.filtered_labels.map(l=>CONF_COLORS[l]),size:5,opacity:.85},
          name:`Fiables (${f.n_filtered.toLocaleString()})`,
-         hovertemplate:'<b>%{text}</b><br>Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<extra>Particula fiable</extra>',
+         hovertemplate:'<b>%{text}</b><br>(%{x:.2f}, %{y:.2f})<extra>Fiable</extra>',
          text:f.filtered_labels.map(l=>CONF_NAMES[l])},
     ], {
         paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
@@ -679,15 +755,16 @@ function renderFiltering(a) {
         margin:{l:55,r:20,t:20,b:55},
         xaxis:{title:'Dim 1',gridcolor:DARK.grid,zerolinecolor:DARK.grid},
         yaxis:{title:'Dim 2',gridcolor:DARK.grid,zerolinecolor:DARK.grid},
-        legend:{x:.02,y:.98,bgcolor:'rgba(26,34,54,.9)',bordercolor:DARK.grid,borderwidth:1,font:{size:11}},
+        legend:{x:.02,y:.98,bgcolor:'rgba(26,34,54,.9)',bordercolor:DARK.grid,borderwidth:1,font:{size:10}},
         showlegend:true,
+        annotations,
     }, PCONFIG);
 }
 
 function renderTable(a) {
     let html = `<table>
         <thead><tr>
-            <th>Conformacion</th><th>Particulas</th><th>% del Total</th>
+            <th>Pose</th><th>Imagenes</th><th>% del Total</th>
             <th>Error Medio</th><th>Desv. Est.</th><th>% Fiable</th><th>Fiabilidad</th>
         </tr></thead><tbody>`;
 
