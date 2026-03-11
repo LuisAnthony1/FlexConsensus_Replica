@@ -5,6 +5,15 @@ const CONF_COLORS = ['#6366f1','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899'
 const CONF_NAMES = ['Estado A','Estado B','Estado C','Estado D','Estado E','Estado F','Estado G'];
 const DARK = {bg:'#1a2236', grid:'#1e293b', text:'#94a3b8'};
 
+// Seeded PRNG for deterministic cryo-EM images
+function seededRNG(seed) {
+    let s = seed >>> 0;
+    return function() {
+        s = (s * 1664525 + 1013904223) & 0xFFFFFFFF;
+        return (s >>> 0) / 0xFFFFFFFF;
+    };
+}
+
 // Base URL: detecta automáticamente si está detrás de un proxy (e.g. /flexconsensus/)
 const BASE_URL = window.location.pathname.replace(/\/+$/, '').replace(/\/(api|static).*$/, '') || '';
 
@@ -338,6 +347,263 @@ async function runAnalysis() {
 }
 
 // =============================================
+// CRYO-EM GALLERY - Simulated projection images
+// =============================================
+function drawCryoEMImage(canvas, confLabel, rng) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    const imgData = ctx.createImageData(w, h);
+    const d = imgData.data;
+
+    // 1. Background noise (dark, like real cryo-EM micrographs)
+    for (let i = 0; i < d.length; i += 4) {
+        const noise = Math.floor(rng() * 30) + 8;
+        d[i] = d[i+1] = d[i+2] = noise;
+        d[i+3] = 255;
+    }
+
+    // 2. CTF-like radial rings (contrast transfer function artifact)
+    const cx = w/2, cy = h/2;
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const dist = Math.sqrt((x-cx)*(x-cx) + (y-cy)*(y-cy));
+            const ctf = Math.sin(dist * 0.3) * 8;
+            const idx = (y*w+x)*4;
+            const v = Math.max(0, Math.min(255, d[idx] + ctf));
+            d[idx] = d[idx+1] = d[idx+2] = v;
+        }
+    }
+
+    // 3. Protein silhouette (elliptical blob - varies by conformation)
+    const pcx = cx + (rng()-0.5)*16;
+    const pcy = cy + (rng()-0.5)*16;
+    const shapes = [
+        // Different shapes per conformation to show visual difference
+        {rx:22+rng()*12, ry:16+rng()*8, lobes:1},   // A: compact
+        {rx:14+rng()*8, ry:26+rng()*10, lobes:2},    // B: elongated
+        {rx:18+rng()*10, ry:18+rng()*10, lobes:1},   // C: round
+        {rx:25+rng()*8, ry:12+rng()*6, lobes:3},     // D: wide multi-lobe
+    ];
+    const shape = shapes[confLabel % shapes.length];
+    const angle = rng() * Math.PI;
+
+    // Draw main body
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const dx = (x-pcx)*Math.cos(angle) + (y-pcy)*Math.sin(angle);
+            const dy = -(x-pcx)*Math.sin(angle) + (y-pcy)*Math.cos(angle);
+            const e = (dx*dx)/(shape.rx*shape.rx) + (dy*dy)/(shape.ry*shape.ry);
+            if (e < 1.0) {
+                const idx = (y*w+x)*4;
+                const brightness = 35 + (1-e)*45;
+                d[idx] = d[idx+1] = d[idx+2] = Math.min(255, d[idx] + brightness);
+            }
+        }
+    }
+
+    // Additional lobes for complex shapes
+    if (shape.lobes >= 2) {
+        const lx = pcx + Math.cos(angle)*shape.rx*0.5;
+        const ly = pcy + Math.sin(angle)*shape.ry*0.5;
+        const lr = shape.rx*0.4;
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const dist = Math.sqrt((x-lx)*(x-lx)+(y-ly)*(y-ly));
+                if (dist < lr) {
+                    const idx = (y*w+x)*4;
+                    d[idx] = d[idx+1] = d[idx+2] = Math.min(255, d[idx] + 30*(1-dist/lr));
+                }
+            }
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    // 4. Conformation color indicator (corner dot)
+    ctx.beginPath();
+    ctx.arc(w-8, 8, 5, 0, Math.PI*2);
+    ctx.fillStyle = CONF_COLORS[confLabel];
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+}
+
+function renderCryoEMGallery(a) {
+    const name = currentProtein.molecule || currentProtein.title || currentProtein.pdb_id;
+    const grid = document.getElementById('cryoem-grid');
+    grid.innerHTML = '';
+
+    // Generate 20 simulated images
+    const nImages = 20;
+    const seed = parseInt(currentProtein.pdb_id.split('').map(c=>c.charCodeAt(0)).join('').slice(0,8)) || 12345;
+
+    for (let i = 0; i < nImages; i++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 100;
+        canvas.height = 100;
+        const confLabel = a.labels[i % a.labels.length];
+        const rng = seededRNG(seed + i*7919);
+        drawCryoEMImage(canvas, confLabel, rng);
+        canvas.title = `Imagen ${i+1} - ${CONF_NAMES[confLabel]}`;
+        grid.appendChild(canvas);
+    }
+
+    document.getElementById('explain-cryoem').innerHTML = `
+        <strong>Cada cuadrito es una "foto" simulada</strong> de ${name} congelada, vista desde un angulo diferente.<br><br>
+        En la realidad, un microscopio <strong>Cryo-EM</strong> (Cryo-Electron Microscopy) congela la proteina a -196 C
+        y le dispara un haz de electrones para obtener una imagen 2D en escala de grises (muy ruidosa, como las de arriba).<br><br>
+        <strong>El punto de color en la esquina</strong> indica en que conformacion (pose) estaba la proteina cuando se "fotografio".
+        Pero en la realidad, <strong>NO sabemos la pose de antemano</strong> &mdash; eso es lo que las IAs deben descubrir
+        a partir de estas imagenes borrosas.<br><br>
+        Se simularon <strong>${a.n_particles.toLocaleString()} imagenes</strong> como estas. Aqui mostramos solo 20 como ejemplo.`;
+
+    document.getElementById('cryoem-caption').innerHTML =
+        `Mostrando 20 de ${a.n_particles.toLocaleString()} imagenes simuladas.
+         Cada punto de color = conformacion asignada (${a.n_conformations} poses detectadas).`;
+}
+
+// =============================================
+// CHART GUIDE BOXES
+// =============================================
+function renderChartGuides(a) {
+    const n = a.n_conformations;
+
+    // PASO 2 guide
+    let dotsHtml = '';
+    for (let i = 0; i < Math.min(n, 5); i++) {
+        dotsHtml += `<span class="cg-dot" style="background:${CONF_COLORS[i]}"></span> ${CONF_NAMES[i]}`;
+        if (i < Math.min(n, 5)-1) dotsHtml += '<span class="cg-sep">|</span>';
+    }
+    document.getElementById('guide-methods').innerHTML = `
+        <div class="cg-row">
+            <strong>Como leer este grafico:</strong>
+            Cada punto = 1 imagen de la proteina.
+            Puntos cercanos = la IA cree que son poses similares.
+        </div>
+        <div class="cg-row">
+            <strong>Colores:</strong> ${dotsHtml}
+        </div>
+        <div class="cg-row">
+            <strong>Ejes X, Y:</strong> Coordenadas del "mapa mental" de la IA (espacio latente reducido a 2D).
+            NO son coordenadas fisicas.
+        </div>`;
+
+    // PASO 3 guide
+    document.getElementById('guide-consensus').innerHTML = `
+        <div class="cg-row">
+            <strong>Este es el mapa UNIFICADO.</strong>
+            FlexConsensus tomo los dos mapas de arriba y los alinea en un solo espacio.
+        </div>
+        <div class="cg-row">
+            <strong>"Por Conformacion":</strong> Colores = poses. Grupos bien separados = poses bien definidas.
+            <span class="cg-sep">|</span>
+            <strong>"Por Error":</strong> <span class="cg-dot" style="background:#22c55e"></span> verde = las 2 IAs coinciden,
+            <span class="cg-dot" style="background:#ef4444"></span> rojo = discrepan.
+        </div>`;
+
+    // PASO 4 guide
+    document.getElementById('guide-error').innerHTML = `
+        <div class="cg-row">
+            <strong>Izquierda (histograma):</strong>
+            Eje X = magnitud del error. Eje Y = cuantas imagenes tienen ese error.
+            <span class="cg-bar" style="background:#22c55e"></span> verde = fiable (error bajo).
+            <span class="cg-bar" style="background:#ef4444"></span> rojo = dudoso (error alto).
+            Linea P20 = umbral: 20% de imagenes con menor error.
+        </div>
+        <div class="cg-row">
+            <strong>Derecha (filtrado):</strong>
+            Gris = todas las ${a.n_particles.toLocaleString()} imagenes.
+            Color = solo las fiables. Si los grupos de color se ven mas definidos, el filtrado funciona.
+        </div>`;
+}
+
+// =============================================
+// COMPARISON VISUAL (mini scatter M1 + M2 = Consensus)
+// =============================================
+function drawMiniScatter(canvas, data, labels) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = '#1a2236';
+    ctx.fillRect(0, 0, w, h);
+
+    const xArr = data.x, yArr = data.y;
+    let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+    for (let i = 0; i < xArr.length; i++) {
+        if (xArr[i] < xMin) xMin = xArr[i];
+        if (xArr[i] > xMax) xMax = xArr[i];
+        if (yArr[i] < yMin) yMin = yArr[i];
+        if (yArr[i] > yMax) yMax = yArr[i];
+    }
+    const pad = 8;
+    const xRange = xMax - xMin || 1;
+    const yRange = yMax - yMin || 1;
+
+    // Draw every 3rd point for performance
+    for (let i = 0; i < xArr.length; i += 3) {
+        const px = pad + ((xArr[i] - xMin) / xRange) * (w - 2*pad);
+        const py = pad + ((yArr[i] - yMin) / yRange) * (h - 2*pad);
+        ctx.fillStyle = CONF_COLORS[labels[i]];
+        ctx.globalAlpha = 0.5;
+        ctx.fillRect(px, py, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+}
+
+function renderComparisonVisual(a) {
+    const container = document.getElementById('comparison-visual');
+    const size = 150;
+
+    // Create M1 mini scatter
+    const c1 = document.createElement('canvas');
+    c1.width = size; c1.height = size;
+    drawMiniScatter(c1, a.method1, a.labels);
+
+    // Create M2 mini scatter
+    const c2 = document.createElement('canvas');
+    c2.width = size; c2.height = size;
+    drawMiniScatter(c2, a.method2, a.labels);
+
+    // Create consensus mini scatter
+    const c3 = document.createElement('canvas');
+    c3.width = size; c3.height = size;
+    drawMiniScatter(c3, a.consensus, a.labels);
+
+    container.innerHTML = `
+        <div class="cv-mini-box method1">
+            <div id="cv-canvas-m1"></div>
+            <div class="cv-mini-label">CryoDRGN (IA 1)</div>
+        </div>
+        <div class="cv-symbol">+</div>
+        <div class="cv-mini-box method2">
+            <div id="cv-canvas-m2"></div>
+            <div class="cv-mini-label">HetSIREN (IA 2)</div>
+        </div>
+        <div class="cv-symbol arrow">=</div>
+        <div class="cv-mini-box consensus">
+            <div id="cv-canvas-cons"></div>
+            <div class="cv-mini-label">Consenso Unificado</div>
+        </div>`;
+
+    document.getElementById('cv-canvas-m1').appendChild(c1);
+    document.getElementById('cv-canvas-m2').appendChild(c2);
+    document.getElementById('cv-canvas-cons').appendChild(c3);
+}
+
+// =============================================
+// FLOW CONNECTOR LABELS
+// =============================================
+function renderFlowLabels(a) {
+    const name = currentProtein.molecule || currentProtein.title || currentProtein.pdb_id;
+    const el1 = document.getElementById('fc-label-1');
+    const el2 = document.getElementById('fc-label-2');
+    const el3 = document.getElementById('fc-label-3');
+    if (el1) el1.textContent = `Las ${a.n_particles.toLocaleString()} imagenes pasan a 2 IAs independientes...`;
+    if (el2) el2.textContent = `FlexConsensus alinea ambos mapas en uno solo...`;
+    if (el3) el3.textContent = `Se mide que tan confiable es cada resultado...`;
+}
+
+// =============================================
 // RENDER RESULTS
 // =============================================
 function renderResults(a) {
@@ -416,6 +682,12 @@ function renderResults(a) {
         <div class="rs-card"><span class="rs-val">${reliablePct}%</span><span class="rs-label">Fiables</span></div>
     `;
 
+    // Cryo-EM Gallery
+    renderCryoEMGallery(a);
+
+    // Flow connector labels
+    renderFlowLabels(a);
+
     // PASO 2: Dos IAs (now 2D like the paper figures)
     document.getElementById('explain-methods').innerHTML = `
         <strong>Analogia:</strong> Le damos las ${a.n_particles.toLocaleString()} fotos de ${name} a <strong>dos doctores diferentes</strong>
@@ -427,6 +699,9 @@ function renderResults(a) {
         <strong>Cada punto</strong> = 1 foto de ${name}. <strong>Cada color</strong> = una pose diferente.
         Las etiquetas sobre el grafico indican donde esta cada grupo.
         Nota que los dos mapas se ven <strong>DIFERENTES</strong> &mdash; cada IA los organizo a su manera.`;
+
+    // Chart guides for all sections
+    renderChartGuides(a);
 
     // Render 2D scatter plots (like paper Figs 1-4)
     renderSubspace('chart-m1', a.method1, a.labels, 'CryoDRGN');
@@ -448,6 +723,9 @@ function renderResults(a) {
                 <span style="color:#f59e0b">Amarillo/rojo</span> = discrepan (dudoso).</li>
             <li><strong>"Subespacio"</strong>: Estilo del paper. Fondo gris = espacio comun. Colores = la vista de cada IA por separado.</li>
         </ul>`;
+
+    // Comparison visual (mini M1 + M2 = Consensus)
+    renderComparisonVisual(a);
 
     renderConsensus('labels');
 

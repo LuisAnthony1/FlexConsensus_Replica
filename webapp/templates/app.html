@@ -216,6 +216,20 @@
     <!-- Stats row -->
     <div class="results-stats" id="results-stats"></div>
 
+    <!-- Cryo-EM Gallery: simulated projection images -->
+    <div class="results-section" id="section-cryoem-gallery">
+        <div class="rs-step-badge">LAS "FOTOS" CRYO-EM</div>
+        <div class="rs-header">
+            <h3>Asi se ven las imagenes que analizan las IAs</h3>
+        </div>
+        <div class="rs-explanation" id="explain-cryoem"></div>
+        <div class="cryoem-grid" id="cryoem-grid"></div>
+        <div class="cryoem-caption" id="cryoem-caption"></div>
+    </div>
+
+    <!-- Flow connector -->
+    <div class="flow-connector"><div class="fc-line"></div><div class="fc-label" id="fc-label-1"></div><div class="fc-arrow">&#x25BC;</div></div>
+
     <!-- PASO 2: Dos IAs analizan la proteina -->
     <div class="results-section">
         <div class="rs-step-badge">PASO 2 &mdash; DOS IAs INDEPENDIENTES</div>
@@ -223,6 +237,8 @@
             <h3>Cada IA genera su propio "mapa" de las conformaciones</h3>
         </div>
         <div class="rs-explanation" id="explain-methods"></div>
+        <!-- Chart guide -->
+        <div class="chart-guide" id="guide-methods"></div>
         <div class="chart-row">
             <div class="chart-box">
                 <div class="chart-label">CryoDRGN <span>Metodo 1 - VAE en Fourier</span></div>
@@ -236,6 +252,9 @@
         <div class="rs-insight" id="insight-methods"></div>
     </div>
 
+    <!-- Flow connector -->
+    <div class="flow-connector"><div class="fc-line"></div><div class="fc-label" id="fc-label-2"></div><div class="fc-arrow">&#x25BC;</div></div>
+
     <!-- PASO 3: FlexConsensus unifica -->
     <div class="results-section">
         <div class="rs-step-badge">PASO 3 &mdash; FLEXCONSENSUS UNIFICA</div>
@@ -243,14 +262,21 @@
             <h3>FlexConsensus alinea ambos mapas en uno solo</h3>
         </div>
         <div class="rs-explanation" id="explain-consensus"></div>
+        <!-- Visual comparison: M1 + M2 = Consensus -->
+        <div class="comparison-visual" id="comparison-visual"></div>
         <div class="consensus-tabs">
             <button class="c-tab active" onclick="renderConsensus('labels', this)">Por Conformacion</button>
             <button class="c-tab" onclick="renderConsensus('errors', this)">Por Error</button>
             <button class="c-tab" onclick="renderConsensus('subspace', this)">Subespacio (Paper)</button>
         </div>
+        <!-- Chart guide -->
+        <div class="chart-guide" id="guide-consensus"></div>
         <div id="chart-consensus" class="chart-area-big"></div>
         <div class="rs-insight" id="insight-consensus"></div>
     </div>
+
+    <!-- Flow connector -->
+    <div class="flow-connector"><div class="fc-line"></div><div class="fc-label" id="fc-label-3"></div><div class="fc-arrow">&#x25BC;</div></div>
 
     <!-- PASO 4: Medir fiabilidad -->
     <div class="results-section">
@@ -259,6 +285,8 @@
             <h3>Que tan confiables son los resultados?</h3>
         </div>
         <div class="rs-explanation" id="explain-error"></div>
+        <!-- Chart guide -->
+        <div class="chart-guide" id="guide-error"></div>
         <div class="chart-row">
             <div class="chart-box">
                 <div class="chart-label">Distribucion de Consensus Error <span>Verde = fiable, Rojo = no fiable</span></div>

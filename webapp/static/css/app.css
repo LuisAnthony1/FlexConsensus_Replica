@@ -192,6 +192,36 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .pbar{width:100%;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
 .pbar-fill{height:100%;border-radius:3px;transition:width .8s;}
 
+/* CRYO-EM GALLERY */
+.cryoem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.5rem;margin:1rem 0;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1rem;}
+.cryoem-grid canvas{width:100%;aspect-ratio:1;border-radius:6px;border:1px solid var(--border);cursor:help;}
+.cryoem-caption{text-align:center;font-size:.78rem;color:var(--muted);margin-top:.5rem;}
+
+/* FLOW CONNECTORS */
+.flow-connector{max-width:1200px;margin:0 auto;padding:.25rem 2rem;display:flex;flex-direction:column;align-items:center;gap:.15rem;}
+.fc-line{width:2px;height:20px;background:linear-gradient(to bottom,var(--accent),rgba(99,102,241,.2));}
+.fc-label{font-size:.72rem;color:var(--muted);font-weight:500;letter-spacing:.03em;text-align:center;}
+.fc-arrow{color:var(--accent);font-size:.9rem;opacity:.6;}
+
+/* CHART GUIDE BOXES */
+.chart-guide{padding:.6rem 1.25rem;font-size:.78rem;color:var(--text2);background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);border-radius:10px;margin-bottom:.75rem;line-height:1.7;}
+.chart-guide .cg-row{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:.15rem;}
+.chart-guide .cg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.chart-guide .cg-bar{display:inline-block;width:18px;height:10px;border-radius:2px;flex-shrink:0;}
+.chart-guide .cg-sep{color:var(--border);margin:0 .3rem;}
+.chart-guide strong{color:var(--text);}
+
+/* COMPARISON VISUAL (PASO 3) */
+.comparison-visual{display:flex;align-items:center;justify-content:center;gap:1rem;margin-bottom:1.25rem;padding:1.25rem;background:var(--bg2);border:1px solid var(--border);border-radius:12px;flex-wrap:wrap;}
+.cv-mini-box{text-align:center;}
+.cv-mini-box canvas{border-radius:8px;border:2px solid var(--border);display:block;}
+.cv-mini-box.method1 canvas{border-color:#6366f1;}
+.cv-mini-box.method2 canvas{border-color:#22c55e;}
+.cv-mini-box.consensus canvas{border-color:var(--accent2);}
+.cv-mini-label{font-size:.72rem;font-weight:600;margin-top:.4rem;color:var(--text2);}
+.cv-symbol{font-size:1.5rem;color:var(--muted);font-weight:700;display:flex;align-items:center;}
+.cv-symbol.arrow{color:var(--accent);}
+
 /* RESPONSIVE */
 @media(max-width:768px){
     .search-hero h2{font-size:1.6rem;}
@@ -202,6 +232,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     .chart-row{grid-template-columns:1fr;}
     .results-stats{grid-template-columns:repeat(2,1fr);}
     .results-protein-viewer{grid-template-columns:1fr;}
+    .cryoem-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));}
+    .comparison-visual{flex-direction:column;}
 }
 
 /* STEP BADGES */
