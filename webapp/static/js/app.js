@@ -1102,223 +1102,187 @@ function renderFiltering(a) {
 }
 
 // =============================================
-// PROTEIN STRUCTURE LEVELS
+// PROTEIN STRUCTURE LEVELS  (3Dmol real viewers)
 // =============================================
-function renderProteinStructureLevels(p, a) {
-    const seqLen = p.seq_length || 200;
-    const pdbId = p.pdb_id || 'XXXX';
-
-    document.getElementById('explain-structure').innerHTML = `
-        Las proteinas se organizan en <strong>4 niveles de estructura</strong>, cada uno mas complejo que el anterior.
-        Entender estos niveles es clave para comprender como funciona <em>${p.molecule || p.title || pdbId}</em>
-        y por que sus diferentes <strong>conformaciones</strong> (poses) son importantes.
-        Los niveles se basan en los <strong>${seqLen.toLocaleString()} residuos (aminoacidos)</strong> de esta proteina.`;
-
-    // Seeded RNG based on pdb_id
-    let seed = pdbId.split('').reduce((a,c) => a + c.charCodeAt(0), 0) * 7919;
-    function srng() {
-        seed = (seed * 1664525 + 1013904223) & 0xFFFFFFFF;
-        return (seed >>> 0) / 0xFFFFFFFF;
-    }
-
-    // Amino acid types and colors
-    const AA_TYPES = [
-        {code:'A',name:'Ala',cat:'hydrophobic'},{code:'V',name:'Val',cat:'hydrophobic'},
-        {code:'L',name:'Leu',cat:'hydrophobic'},{code:'I',name:'Ile',cat:'hydrophobic'},
-        {code:'M',name:'Met',cat:'hydrophobic'},{code:'F',name:'Phe',cat:'hydrophobic'},
-        {code:'W',name:'Trp',cat:'hydrophobic'},{code:'P',name:'Pro',cat:'special'},
-        {code:'G',name:'Gly',cat:'special'},{code:'S',name:'Ser',cat:'polar'},
-        {code:'T',name:'Thr',cat:'polar'},{code:'C',name:'Cys',cat:'polar'},
-        {code:'Y',name:'Tyr',cat:'polar'},{code:'N',name:'Asn',cat:'polar'},
-        {code:'Q',name:'Gln',cat:'polar'},{code:'R',name:'Arg',cat:'charged+'},
-        {code:'K',name:'Lys',cat:'charged+'},{code:'H',name:'His',cat:'charged+'},
-        {code:'D',name:'Asp',cat:'charged-'},{code:'E',name:'Glu',cat:'charged-'},
-    ];
-    const CAT_COLORS = {
-        'hydrophobic': '#f59e0b',
-        'polar':       '#6366f1',
-        'charged+':    '#ef4444',
-        'charged-':    '#ec4899',
-        'special':     '#94a3b8',
-    };
-
-    // Generate primary sequence
-    const displayLen = Math.min(seqLen, 120);
-    let seqHtml = '<div class="seq-strip">';
-    for (let i = 0; i < displayLen; i++) {
-        const aa = AA_TYPES[Math.floor(srng() * AA_TYPES.length)];
-        const col = CAT_COLORS[aa.cat];
-        seqHtml += `<div class="seq-aa" style="background:${col};" title="${aa.name} (${aa.code}) - ${aa.cat} - posicion ${i+1}"></div>`;
-    }
-    if (seqLen > displayLen) seqHtml += `<div style="color:#64748b;font-size:.65rem;white-space:nowrap;padding-left:4px;">...+${(seqLen-displayLen).toLocaleString()} mas</div>`;
-    seqHtml += '</div>';
-
-    // Generate secondary structure SVG
-    const secStructSegments = [];
-    let pos = 0;
-    while (pos < seqLen) {
-        const r = srng();
-        const len = Math.floor(srng() * 20) + 5;
-        const type = r < 0.35 ? 'helix' : r < 0.55 ? 'sheet' : 'loop';
-        secStructSegments.push({type, len, start: pos});
-        pos += len;
-    }
-
-    const svgW = 560, svgH = 60;
-    const scale = (svgW - 20) / seqLen;
-    let svgParts = `<svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="60" xmlns="http://www.w3.org/2000/svg">`;
-    const cy = svgH / 2;
-
-    // Draw loop baseline
-    svgParts += `<line x1="10" y1="${cy}" x2="${svgW-10}" y2="${cy}" stroke="#334155" stroke-width="1.5"/>`;
-
-    secStructSegments.forEach(seg => {
-        const x1 = 10 + seg.start * scale;
-        const x2 = 10 + (seg.start + seg.len) * scale;
-        if (seg.type === 'helix') {
-            // Helix: colored rectangle with zigzag top
-            svgParts += `<rect x="${x1}" y="${cy-10}" width="${x2-x1}" height="20" rx="4" fill="#6366f1" opacity="0.7"/>`;
-            // Wavy pattern inside
-            let wavePath = `M ${x1} ${cy}`;
-            for (let wx = x1+4; wx < x2-4; wx += 8) {
-                wavePath += ` Q ${wx+2} ${cy-7} ${wx+4} ${cy}`;
-            }
-            svgParts += `<path d="${wavePath}" stroke="#a5b4fc" stroke-width="1.5" fill="none" opacity="0.8"/>`;
-        } else if (seg.type === 'sheet') {
-            // Beta sheet: arrow shape
-            const arrowW = x2 - x1;
-            const headW = Math.min(12, arrowW * 0.3);
-            svgParts += `<polygon points="${x1},${cy-7} ${x2-headW},${cy-7} ${x2},${cy} ${x2-headW},${cy+7} ${x1},${cy+7}" fill="#22c55e" opacity="0.7"/>`;
-        }
-        // loops are just the baseline line
-    });
-
-    // Legend
-    svgParts += `<rect x="10" y="${svgH-16}" width="10" height="10" rx="2" fill="#6366f1" opacity="0.7"/>`;
-    svgParts += `<text x="23" y="${svgH-7}" font-size="9" fill="#94a3b8">Helice-α</text>`;
-    svgParts += `<rect x="80" y="${svgH-16}" width="10" height="10" rx="2" fill="#22c55e" opacity="0.7"/>`;
-    svgParts += `<text x="93" y="${svgH-7}" font-size="9" fill="#94a3b8">Lamina-β</text>`;
-    svgParts += `<line x1="160" y1="${svgH-11}" x2="170" y2="${svgH-11}" stroke="#334155" stroke-width="2"/>`;
-    svgParts += `<text x="173" y="${svgH-7}" font-size="9" fill="#94a3b8">Lazo</text>`;
-    svgParts += '</svg>';
-
-    // Tertiary: simple folded ribbon SVG
-    const tertW = 320, tertH = 60;
-    let tertSvg = `<svg viewBox="0 0 ${tertW} ${tertH}" width="100%" height="60" xmlns="http://www.w3.org/2000/svg">`;
-    // Draw ribbon path
-    let ribbonPath = 'M 20 30';
-    const nPoints = 8;
-    for (let i = 1; i <= nPoints; i++) {
-        const x = 20 + i * (tertW - 40) / nPoints;
-        const y = 30 + Math.sin(i * 1.3) * 18;
-        const cx1 = 20 + (i - 0.5) * (tertW - 40) / nPoints;
-        const cy1 = 30 + Math.sin((i - 0.5) * 1.3) * 18;
-        ribbonPath += ` Q ${cx1} ${cy1} ${x} ${y}`;
-    }
-    tertSvg += `<path d="${ribbonPath}" stroke="url(#tgrad)" stroke-width="6" fill="none" stroke-linecap="round"/>`;
-    tertSvg += `<defs><linearGradient id="tgrad" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#6366f1"/>
-        <stop offset="33%" stop-color="#22c55e"/>
-        <stop offset="66%" stop-color="#f59e0b"/>
-        <stop offset="100%" stop-color="#06b6d4"/>
-    </linearGradient></defs>`;
-    // Domain spheres
-    [[70,25,'#6366f1'],[160,35,'#22c55e'],[250,22,'#f59e0b']].forEach(([dx,dy,col]) => {
-        tertSvg += `<circle cx="${dx}" cy="${dy}" r="14" fill="${col}" opacity="0.2" stroke="${col}" stroke-width="1.5"/>`;
-    });
-    tertSvg += '</svg>';
-
-    // Quaternary: multiple chains
-    const nChains = Math.max(1, Math.round(srng() * 3) + 1);
-    const qW = 220, qH = 60;
-    let quatSvg = `<svg viewBox="0 0 ${qW} ${qH}" width="100%" height="60" xmlns="http://www.w3.org/2000/svg">`;
-    const chainCols = ['#6366f1','#22c55e','#f59e0b','#06b6d4'];
-    const chainPos = [[55,30],[110,30],[165,30],[85,45]];
-    for (let ci = 0; ci < nChains; ci++) {
-        const [cx2, cy2] = chainPos[ci] || [qW/2, qH/2];
-        quatSvg += `<ellipse cx="${cx2}" cy="${cy2}" rx="30" ry="18" fill="${chainCols[ci]}" opacity="0.25" stroke="${chainCols[ci]}" stroke-width="1.5"/>`;
-        quatSvg += `<text x="${cx2}" y="${cy2+4}" text-anchor="middle" font-size="10" font-weight="700" fill="${chainCols[ci]}">Cadena ${String.fromCharCode(65+ci)}</text>`;
-        if (ci > 0) {
-            const [px, py] = chainPos[ci-1];
-            quatSvg += `<line x1="${px+22}" y1="${py}" x2="${cx2-22}" y2="${cy2}" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,2"/>`;
-        }
-    }
-    quatSvg += '</svg>';
+async function renderProteinStructureLevels(p, a) {
+    const pdbId = (p.pdb_id || 'XXXX').toUpperCase();
+    const name  = p.molecule || p.title || pdbId;
 
     const grid = document.getElementById('struct-grid');
     if (!grid) return;
 
+    // ── explain text ────────────────────────────────────────────
+    const explEl = document.getElementById('explain-structure');
+    if (explEl) explEl.innerHTML = `
+        Las proteinas se organizan en <strong>4 niveles de estructura</strong>, cada uno mas complejo que el anterior.
+        Las visualizaciones 3D muestran la estructura real de <em>${name}</em> (PDB: ${pdbId}) con distintos esquemas de color
+        para resaltar cada nivel estructural. Cambia de proteina y las visualizaciones se actualizan automaticamente.`;
+
+    // ── Scaffold HTML (before viewers load) ─────────────────────
+    const loadingHtml = `<div class="struct-loading"><div class="struct-spinner"></div><span>Cargando ${pdbId}...</span></div>`;
+
     grid.innerHTML = `
+        <!-- 1° Primary: sequence from RCSB FASTA -->
         <div class="struct-card">
             <div class="struct-card-header">
                 <div class="struct-num sn1">1°</div>
                 <div>
                     <div class="struct-card-title">Estructura Primaria</div>
-                    <div class="struct-card-sub">Secuencia lineal de aminoacidos</div>
+                    <div class="struct-card-sub">Secuencia real de aminoacidos &mdash; RCSB PDB</div>
                 </div>
             </div>
-            <div class="struct-viz">${seqHtml}</div>
-            <p class="struct-desc">
-                Cada bloque es un <strong>aminoacido</strong>. La secuencia especifica el orden exacto de los ${seqLen.toLocaleString()} residuos.
-                <span style="color:#f59e0b">&#9632; Naranja</span> = hidrofobo,
-                <span style="color:#6366f1">&#9632; Morado</span> = polar,
-                <span style="color:#ef4444">&#9632; Rojo</span> = cargado (+),
-                <span style="color:#ec4899">&#9632; Rosa</span> = cargado (&minus;),
-                <span style="color:#94a3b8">&#9632; Gris</span> = especial.
-                Esta secuencia <strong>determina todo</strong>: como se pliega, que hace y como cambia de conformacion.
+            <div class="struct-viz seq-viz" id="struct-seq-viz">
+                <div style="color:#64748b;font-size:.75rem">Cargando secuencia...</div>
+            </div>
+            <p class="struct-desc" id="struct-seq-desc">
+                <span style="color:#f59e0b">&#9632;</span> Hidrofobo &nbsp;
+                <span style="color:#6366f1">&#9632;</span> Polar &nbsp;
+                <span style="color:#ef4444">&#9632;</span> Cargado(+) &nbsp;
+                <span style="color:#ec4899">&#9632;</span> Cargado(&minus;) &nbsp;
+                <span style="color:#94a3b8">&#9632;</span> Especial &mdash;
+                esta secuencia <strong>determina todo</strong>: como se pliega y como cambia de conformacion.
             </p>
         </div>
 
+        <!-- 2° Secondary: 3Dmol ssJmol coloring -->
         <div class="struct-card">
             <div class="struct-card-header">
                 <div class="struct-num sn2">2°</div>
                 <div>
                     <div class="struct-card-title">Estructura Secundaria</div>
-                    <div class="struct-card-sub">Helices-&alpha; y Laminas-&beta;</div>
+                    <div class="struct-card-sub">Helices-&alpha; (azul) y Laminas-&beta; (amarillo)</div>
                 </div>
             </div>
-            <div class="struct-viz">${svgParts}</div>
+            <div class="struct-viz" id="struct-viz-secondary">
+                ${loadingHtml}
+                <div class="struct-style-badge">Cartoon &mdash; ssJmol</div>
+            </div>
             <p class="struct-desc">
-                Patrones locales de plegamiento estabilizados por <strong>puentes de hidrogeno</strong>.
-                <span style="color:#6366f1">&#9632; Helice-&alpha;</span>: cadena enrollada en espiral (como un resorte).
-                <span style="color:#22c55e">&#9632; Lamina-&beta;</span>: cadena extendida en flecha.
-                <strong>Los lazos</strong> conectan estos elementos. Son regiones mas flexibles y pueden contribuir a las <strong>diferentes conformaciones</strong> que detecta FlexConsensus.
+                <span style="color:#3b82f6">&#9632; Azul</span> = Helice-&alpha; (espiral). &nbsp;
+                <span style="color:#f59e0b">&#9632; Amarillo</span> = Lamina-&beta; (flecha). &nbsp;
+                <span style="color:#94a3b8">&#9632; Gris</span> = Lazo flexible.
+                Las regiones de lazo son las <strong>mas moviles</strong> y contribuyen a las conformaciones que detecta FlexConsensus.
             </p>
         </div>
 
+        <!-- 3° Tertiary: 3Dmol spectrum (rainbow N→C) -->
         <div class="struct-card">
             <div class="struct-card-header">
                 <div class="struct-num sn3">3°</div>
                 <div>
                     <div class="struct-card-title">Estructura Terciaria</div>
-                    <div class="struct-card-sub">Plegamiento 3D de la cadena</div>
+                    <div class="struct-card-sub">Plegamiento 3D completo &mdash; N(azul) → C(rojo)</div>
                 </div>
             </div>
-            <div class="struct-viz">${tertSvg}</div>
+            <div class="struct-viz" id="struct-viz-tertiary">
+                ${loadingHtml}
+                <div class="struct-style-badge">Cartoon &mdash; Espectro</div>
+            </div>
             <p class="struct-desc">
-                La cadena se <strong>pliega en una forma 3D unica</strong> estabilizada por interacciones entre aminoacidos distantes.
-                Los <strong>dominios</strong> (circulos) son regiones con funcion especifica.
-                Esta es la estructura que ves en el visor 3D.
-                <strong>Cuando la proteina cambia de conformacion, esta estructura 3D se deforma</strong>: los dominios se abren, cierran o rotan.
+                Color arcoiris de N-terminal (<span style="color:#3b82f6">azul</span>) a C-terminal (<span style="color:#ef4444">rojo</span>).
+                Muestra el <strong>recorrido completo</strong> de la cadena polipeptidica en 3D.
+                <strong>Cuando la proteina cambia de conformacion, esta estructura se deforma</strong>: los dominios se abren, cierran o rotan.
             </p>
         </div>
 
+        <!-- 4° Quaternary: 3Dmol chain coloring -->
         <div class="struct-card">
             <div class="struct-card-header">
                 <div class="struct-num sn4">4°</div>
                 <div>
                     <div class="struct-card-title">Estructura Cuaternaria</div>
-                    <div class="struct-card-sub">${nChains > 1 ? nChains + ' cadenas ensambladas' : 'Cadena unica (monomero)'}</div>
+                    <div class="struct-card-sub">Subunidades por cadena (A, B, C...)</div>
                 </div>
             </div>
-            <div class="struct-viz">${quatSvg}</div>
-            <p class="struct-desc">
-                ${nChains > 1
-                    ? `La proteina <strong>${p.molecule || p.title}</strong> esta formada por <strong>${nChains} subunidades (cadenas)</strong> que se ensamblan juntas. Cada cadena tiene su propia estructura terciaria. La conformacion global de la proteina incluye los movimientos <strong>relativos entre estas subunidades</strong>. Por ejemplo, el anticuerpo IgG tiene 4 cadenas (2 pesadas + 2 ligeras) que forman la caracteristica forma de "Y".`
-                    : `Esta proteina existe como un <strong>monomero</strong> (una sola cadena polipeptidica). Sus conformaciones surgen de movimientos <strong>dentro de esa unica cadena</strong>: rotaciones de dominios, apertura de bolsillos de union, etc.`
-                }
+            <div class="struct-viz" id="struct-viz-quaternary">
+                ${loadingHtml}
+                <div class="struct-style-badge">Cartoon &mdash; Por cadena</div>
+            </div>
+            <p class="struct-desc" id="struct-quat-desc">
+                Cada <strong>color = una subunidad (cadena)</strong> de ${name}.
+                Si hay multiples colores, la proteina es un <strong>oligomero</strong> (varias cadenas ensambladas).
+                Un solo color = <strong>monomero</strong>. Los anticuerpos IgG tienen 4 cadenas (2 pesadas + 2 ligeras) formando la "Y".
             </p>
         </div>`;
+
+    // ── Primary sequence: fetch FASTA from RCSB ─────────────────
+    (async () => {
+        const vizEl = document.getElementById('struct-seq-viz');
+        try {
+            // Try polymer entity 1 first
+            const resp = await fetch(
+                `https://data.rcsb.org/rest/v1/core/polymer_entity/${pdbId.toLowerCase()}/1`
+            );
+            const d = await resp.json();
+            const seq = d.entity_poly?.pdbx_seq_one_letter_code_can || d.entity_poly?.pdbx_seq_one_letter_code || '';
+            if (seq && vizEl) {
+                const CAT_MAP = {
+                    A:'h',V:'h',L:'h',I:'h',M:'h',F:'h',W:'h',Y:'p',
+                    S:'p',T:'p',C:'p',N:'p',Q:'p',
+                    R:'+',K:'+',H:'+',
+                    D:'-',E:'-',
+                    P:'s',G:'s'
+                };
+                const CAT_COL = { h:'#f59e0b', p:'#6366f1', '+':'#ef4444', '-':'#ec4899', s:'#94a3b8' };
+                const display = seq.slice(0, 150);
+                let html = '<div class="seq-strip">';
+                for (const aa of display) {
+                    const col = CAT_COL[CAT_MAP[aa] || 's'];
+                    html += `<div class="seq-aa" style="background:${col}" title="${aa}"></div>`;
+                }
+                if (seq.length > 150) html += `<span style="color:#64748b;font-size:.65rem;padding-left:4px">+${seq.length-150} mas</span>`;
+                html += '</div>';
+                vizEl.innerHTML = html;
+                const descEl = document.getElementById('struct-seq-desc');
+                if (descEl) {
+                    descEl.innerHTML = `<strong>${seq.length} aminoacidos</strong> en la cadena A. &nbsp;
+                        <span style="color:#f59e0b">&#9632;</span> Hidrofobo &nbsp;
+                        <span style="color:#6366f1">&#9632;</span> Polar &nbsp;
+                        <span style="color:#ef4444">&#9632;</span> Cargado(+) &nbsp;
+                        <span style="color:#ec4899">&#9632;</span> Cargado(&minus;) &nbsp;
+                        <span style="color:#94a3b8">&#9632;</span> Especial &mdash;
+                        esta secuencia <strong>determina todo</strong>: plegamiento, funcion y conformaciones.`;
+                }
+            }
+        } catch (e) {
+            if (vizEl) vizEl.innerHTML = `<span style="color:#64748b;font-size:.75rem">Secuencia no disponible para ${pdbId}</span>`;
+        }
+    })();
+
+    // ── 3Dmol mini viewers ───────────────────────────────────────
+    function initStructViewer(containerId, styleConfig, bgColor) {
+        const el = document.getElementById(containerId);
+        if (!el || typeof $3Dmol === 'undefined') return;
+
+        const viewer = $3Dmol.createViewer(el, {
+            backgroundColor: bgColor || '#0a0e1a',
+            id: containerId + '_mol',
+        });
+
+        $3Dmol.download('pdb:' + pdbId, viewer, { multimodel: false, frames: false }, () => {
+            viewer.setStyle({}, styleConfig);
+            viewer.zoomTo();
+            viewer.render();
+            // Remove loading overlay
+            const overlay = el.querySelector('.struct-loading');
+            if (overlay) overlay.style.display = 'none';
+        });
+    }
+
+    // Small delay so the DOM is ready
+    setTimeout(() => {
+        initStructViewer('struct-viz-secondary',
+            { cartoon: { colorscheme: 'ssJmol' } },
+            '#0a0e1a');
+
+        initStructViewer('struct-viz-tertiary',
+            { cartoon: { colorscheme: 'spectrum' } },
+            '#0d0d1a');
+
+        initStructViewer('struct-viz-quaternary',
+            { cartoon: { colorscheme: 'chainHetatm' } },
+            '#0a0f1a');
+    }, 300);
 }
 
 // =============================================
