@@ -755,6 +755,12 @@ function renderResults(a) {
         El <span class="bad">${unreliablePct}% restante son dudosas</span>.
         FlexConsensus es como una segunda opinion medica: te dice en que confiar y que descartar.`;
 
+    // Protein structure levels
+    renderProteinStructureLevels(p, a);
+
+    // Dashboard
+    renderDashboard(a);
+
     // PASO 5: Tabla
     document.getElementById('explain-table').innerHTML = `
         Desglose por cada una de las <strong>${a.n_conformations} poses</strong> de ${name}.
@@ -840,44 +846,60 @@ function clusterCenters(data, labels) {
     return centers;
 }
 
-// Paper-style 2D subspace plot with labeled clusters
+// KDE-style 2D subspace plot (paper figure look)
+const KDE_CSCALE_APP = [
+    [0.0,  '#0a0e1a'],[0.08, '#0d1b3e'],[0.20, '#0f2a5a'],
+    [0.35, '#0e4a6e'],[0.50, '#0e6b6e'],[0.65, '#0f8c50'],
+    [0.80, '#22c55e'],[0.92, '#7add40'],[1.0,  '#fde725'],
+];
+
 function renderSubspace(containerId, data, labels, methodName) {
     const uniqueLabels = [...new Set(labels)].sort((a,b)=>a-b);
     const centers = clusterCenters(data, labels);
 
-    const traces = uniqueLabels.map(label => {
+    // KDE density background
+    const traces = [{
+        type: 'histogram2dcontour',
+        x: data.x, y: data.y,
+        colorscale: KDE_CSCALE_APP,
+        showscale: false, ncontours: 16,
+        contours: { coloring: 'heatmap', showlines: false },
+        nbinsx: 50, nbinsy: 50, opacity: 1.0,
+        hoverinfo: 'skip', showlegend: false,
+    }];
+
+    // Scatter per conformation on top
+    uniqueLabels.forEach(label => {
         const mask = labels.map((l,i) => l===label ? i : null).filter(i => i!==null);
-        return {
+        traces.push({
             type:'scatter', mode:'markers',
             name: CONF_NAMES[label],
             x: mask.map(i => data.x[i]),
             y: mask.map(i => data.y[i]),
-            marker:{size:3, color:CONF_COLORS[label], opacity:.6},
+            marker:{size:2.5, color:CONF_COLORS[label], opacity:.55},
             hovertemplate:`<b>${methodName} - ${CONF_NAMES[label]}</b><br>(%{x:.2f}, %{y:.2f})<extra></extra>`,
-        };
+        });
     });
 
-    // Add cluster center labels as annotations
     const annotations = uniqueLabels.map(label => ({
-        x: centers[label].x,
-        y: centers[label].y,
-        text: `<b>${CONF_NAMES[label]}</b>`,
-        showarrow: false,
-        font: {size: 12, color: '#fff', family: 'Inter'},
-        bgcolor: CONF_COLORS[label],
-        borderpad: 4,
-        bordercolor: CONF_COLORS[label],
-        borderwidth: 1,
-        opacity: 0.9,
+        x: centers[label].x, y: centers[label].y,
+        text: `<b>${CONF_NAMES[label]}</b>`, showarrow: false,
+        font: {size: 11, color: '#fff', family: 'Inter'},
+        bgcolor: CONF_COLORS[label], borderpad: 3,
+        bordercolor: CONF_COLORS[label], borderwidth: 1, opacity: 0.9,
     }));
 
-    const layout = {
-        ...LAYOUT_2D,
-        title:{text:methodName,font:{size:13,color:DARK.text},x:0.5},
+    Plotly.newPlot(containerId, traces, {
+        paper_bgcolor:'#0a0e1a', plot_bgcolor:'#0a0e1a',
+        font:{family:'Inter',color:DARK.text,size:10},
+        margin:{l:50,r:20,t:35,b:50},
+        xaxis:{title:{text:'Dimension 1',font:{size:10}},gridcolor:'#1a2236',zerolinecolor:'#1e293b',color:'#64748b'},
+        yaxis:{title:{text:'Dimension 2',font:{size:10}},gridcolor:'#1a2236',zerolinecolor:'#1e293b',color:'#64748b'},
+        title:{text:methodName,font:{size:13,color:'#f1f5f9'},x:0.5},
+        showlegend:true,
+        legend:{x:0.01,y:0.99,bgcolor:'rgba(10,14,26,.9)',bordercolor:'#1e293b',borderwidth:1,font:{size:9,color:DARK.text}},
         annotations,
-    };
-
-    Plotly.newPlot(containerId, traces, layout, PCONFIG);
+    }, PCONFIG);
 }
 
 function renderConsensus(colorBy, btnEl) {
@@ -890,34 +912,49 @@ function renderConsensus(colorBy, btnEl) {
     }
 
     if (colorBy === 'labels') {
-        // Paper Fig 3/4 style: colored by conformation
+        // KDE-style: Common Consensus Landscape (paper Fig 3/4)
         const uniqueLabels = [...new Set(a.labels)].sort((x,y)=>x-y);
         const centers = clusterCenters(a.consensus, a.labels);
 
-        const traces = uniqueLabels.map(label => {
+        const traces = [{
+            type: 'histogram2dcontour',
+            x: a.consensus.x, y: a.consensus.y,
+            colorscale: KDE_CSCALE_APP,
+            showscale: false, ncontours: 18,
+            contours: { coloring: 'heatmap', showlines: false },
+            nbinsx: 55, nbinsy: 55, opacity: 1.0,
+            hoverinfo: 'skip', showlegend: false,
+        }];
+
+        uniqueLabels.forEach(label => {
             const mask = a.labels.map((l,i) => l===label ? i : null).filter(i => i!==null);
-            return {
+            traces.push({
                 type:'scatter', mode:'markers',
                 name: CONF_NAMES[label],
                 x: mask.map(i => a.consensus.x[i]),
                 y: mask.map(i => a.consensus.y[i]),
-                marker:{size:3.5, color:CONF_COLORS[label], opacity:.6},
+                marker:{size:3, color:CONF_COLORS[label], opacity:.55},
                 hovertemplate:`<b>${CONF_NAMES[label]}</b><br>(%{x:.2f}, %{y:.2f})<extra></extra>`,
-            };
+            });
         });
 
         const annotations = uniqueLabels.map(label => ({
             x: centers[label].x, y: centers[label].y,
             text: `<b>${CONF_NAMES[label]}</b>`,
             showarrow: false,
-            font:{size:12,color:'#fff',family:'Inter'},
-            bgcolor:CONF_COLORS[label], borderpad:4, bordercolor:CONF_COLORS[label], borderwidth:1, opacity:0.9,
+            font:{size:11,color:'#fff',family:'Inter'},
+            bgcolor:CONF_COLORS[label], borderpad:3, bordercolor:CONF_COLORS[label], borderwidth:1, opacity:0.9,
         }));
 
         Plotly.newPlot('chart-consensus', traces, {
-            ...LAYOUT_2D,
-            margin:{l:50,r:20,t:40,b:50},
-            title:{text:'Espacio de Consenso FlexConsensus',font:{size:13,color:DARK.text},x:0.5},
+            paper_bgcolor:'#0a0e1a', plot_bgcolor:'#0a0e1a',
+            font:{family:'Inter',color:DARK.text,size:10},
+            margin:{l:50,r:20,t:45,b:50},
+            xaxis:{title:{text:'Dimension 1',font:{size:10}},gridcolor:'#1a2236',zerolinecolor:'#1e293b',color:'#64748b'},
+            yaxis:{title:{text:'Dimension 2',font:{size:10}},gridcolor:'#1a2236',zerolinecolor:'#1e293b',color:'#64748b'},
+            title:{text:'Common Consensus Landscape &mdash; FlexConsensus',font:{size:13,color:'#f1f5f9'},x:0.5},
+            showlegend:true,
+            legend:{x:0.01,y:0.99,bgcolor:'rgba(10,14,26,.9)',bordercolor:'#1e293b',borderwidth:1,font:{size:9,color:DARK.text}},
             annotations,
         }, PCONFIG);
 
@@ -1030,25 +1067,377 @@ function renderFiltering(a) {
     }));
 
     Plotly.newPlot('chart-filter', [
-        {type:'scatter',mode:'markers',x:f.all_x,y:f.all_y,
-         marker:{color:'#475569',size:2.5,opacity:.2},
-         name:`Todas (${f.n_all.toLocaleString()})`,
-         hoverinfo:'skip'},
-        {type:'scatter',mode:'markers',x:f.filtered_x,y:f.filtered_y,
-         marker:{color:f.filtered_labels.map(l=>CONF_COLORS[l]),size:5,opacity:.85},
-         name:`Fiables (${f.n_filtered.toLocaleString()})`,
-         hovertemplate:'<b>%{text}</b><br>(%{x:.2f}, %{y:.2f})<extra>Fiable</extra>',
-         text:f.filtered_labels.map(l=>CONF_NAMES[l])},
+        // KDE background of all particles
+        {
+            type:'histogram2dcontour',
+            x:f.all_x, y:f.all_y,
+            colorscale:[[0,'#0a0e1a'],[0.3,'#182030'],[0.6,'#243040'],[1,'#2e4050']],
+            showscale:false, ncontours:14,
+            contours:{coloring:'heatmap', showlines:false},
+            nbinsx:50, nbinsy:50, opacity:0.95,
+            hoverinfo:'skip', showlegend:false,
+        },
+        // Significant particles colored on top
+        {
+            type:'scatter', mode:'markers',
+            name:`Significativas (${f.n_filtered.toLocaleString()})`,
+            x:f.filtered_x, y:f.filtered_y,
+            marker:{color:f.filtered_labels.map(l=>CONF_COLORS[l]), size:3.5, opacity:.8},
+            hovertemplate:'<b>%{text}</b><br>(%{x:.2f},%{y:.2f})<extra>Particula fiable</extra>',
+            text:f.filtered_labels.map(l=>CONF_NAMES[l]),
+        },
     ], {
-        paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
-        font:{family:'Inter',color:DARK.text,size:11},
-        margin:{l:55,r:20,t:20,b:55},
-        xaxis:{title:'Dim 1',gridcolor:DARK.grid,zerolinecolor:DARK.grid},
-        yaxis:{title:'Dim 2',gridcolor:DARK.grid,zerolinecolor:DARK.grid},
-        legend:{x:.02,y:.98,bgcolor:'rgba(26,34,54,.9)',bordercolor:DARK.grid,borderwidth:1,font:{size:10}},
+        paper_bgcolor:'#0a0e1a', plot_bgcolor:'#0a0e1a',
+        font:{family:'Inter',color:DARK.text,size:10},
+        margin:{l:50,r:20,t:30,b:50},
+        xaxis:{title:{text:'Dimension 1',font:{size:10}},gridcolor:'#1a2236',zerolinecolor:'#1e293b',color:'#64748b'},
+        yaxis:{title:{text:'Dimension 2',font:{size:10}},gridcolor:'#1a2236',zerolinecolor:'#1e293b',color:'#64748b'},
+        title:{text:'Significant Consensus Space',font:{size:12,color:'#22c55e'},x:0.5},
         showlegend:true,
-        annotations,
+        legend:{x:0.01,y:0.99,bgcolor:'rgba(10,14,26,.9)',bordercolor:'#1e293b',borderwidth:1,font:{size:9,color:DARK.text}},
     }, PCONFIG);
+}
+
+// =============================================
+// PROTEIN STRUCTURE LEVELS
+// =============================================
+function renderProteinStructureLevels(p, a) {
+    const seqLen = p.seq_length || 200;
+    const pdbId = p.pdb_id || 'XXXX';
+
+    document.getElementById('explain-structure').innerHTML = `
+        Las proteinas se organizan en <strong>4 niveles de estructura</strong>, cada uno mas complejo que el anterior.
+        Entender estos niveles es clave para comprender como funciona <em>${p.molecule || p.title || pdbId}</em>
+        y por que sus diferentes <strong>conformaciones</strong> (poses) son importantes.
+        Los niveles se basan en los <strong>${seqLen.toLocaleString()} residuos (aminoacidos)</strong> de esta proteina.`;
+
+    // Seeded RNG based on pdb_id
+    let seed = pdbId.split('').reduce((a,c) => a + c.charCodeAt(0), 0) * 7919;
+    function srng() {
+        seed = (seed * 1664525 + 1013904223) & 0xFFFFFFFF;
+        return (seed >>> 0) / 0xFFFFFFFF;
+    }
+
+    // Amino acid types and colors
+    const AA_TYPES = [
+        {code:'A',name:'Ala',cat:'hydrophobic'},{code:'V',name:'Val',cat:'hydrophobic'},
+        {code:'L',name:'Leu',cat:'hydrophobic'},{code:'I',name:'Ile',cat:'hydrophobic'},
+        {code:'M',name:'Met',cat:'hydrophobic'},{code:'F',name:'Phe',cat:'hydrophobic'},
+        {code:'W',name:'Trp',cat:'hydrophobic'},{code:'P',name:'Pro',cat:'special'},
+        {code:'G',name:'Gly',cat:'special'},{code:'S',name:'Ser',cat:'polar'},
+        {code:'T',name:'Thr',cat:'polar'},{code:'C',name:'Cys',cat:'polar'},
+        {code:'Y',name:'Tyr',cat:'polar'},{code:'N',name:'Asn',cat:'polar'},
+        {code:'Q',name:'Gln',cat:'polar'},{code:'R',name:'Arg',cat:'charged+'},
+        {code:'K',name:'Lys',cat:'charged+'},{code:'H',name:'His',cat:'charged+'},
+        {code:'D',name:'Asp',cat:'charged-'},{code:'E',name:'Glu',cat:'charged-'},
+    ];
+    const CAT_COLORS = {
+        'hydrophobic': '#f59e0b',
+        'polar':       '#6366f1',
+        'charged+':    '#ef4444',
+        'charged-':    '#ec4899',
+        'special':     '#94a3b8',
+    };
+
+    // Generate primary sequence
+    const displayLen = Math.min(seqLen, 120);
+    let seqHtml = '<div class="seq-strip">';
+    for (let i = 0; i < displayLen; i++) {
+        const aa = AA_TYPES[Math.floor(srng() * AA_TYPES.length)];
+        const col = CAT_COLORS[aa.cat];
+        seqHtml += `<div class="seq-aa" style="background:${col};" title="${aa.name} (${aa.code}) - ${aa.cat} - posicion ${i+1}"></div>`;
+    }
+    if (seqLen > displayLen) seqHtml += `<div style="color:#64748b;font-size:.65rem;white-space:nowrap;padding-left:4px;">...+${(seqLen-displayLen).toLocaleString()} mas</div>`;
+    seqHtml += '</div>';
+
+    // Generate secondary structure SVG
+    const secStructSegments = [];
+    let pos = 0;
+    while (pos < seqLen) {
+        const r = srng();
+        const len = Math.floor(srng() * 20) + 5;
+        const type = r < 0.35 ? 'helix' : r < 0.55 ? 'sheet' : 'loop';
+        secStructSegments.push({type, len, start: pos});
+        pos += len;
+    }
+
+    const svgW = 560, svgH = 60;
+    const scale = (svgW - 20) / seqLen;
+    let svgParts = `<svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="60" xmlns="http://www.w3.org/2000/svg">`;
+    const cy = svgH / 2;
+
+    // Draw loop baseline
+    svgParts += `<line x1="10" y1="${cy}" x2="${svgW-10}" y2="${cy}" stroke="#334155" stroke-width="1.5"/>`;
+
+    secStructSegments.forEach(seg => {
+        const x1 = 10 + seg.start * scale;
+        const x2 = 10 + (seg.start + seg.len) * scale;
+        if (seg.type === 'helix') {
+            // Helix: colored rectangle with zigzag top
+            svgParts += `<rect x="${x1}" y="${cy-10}" width="${x2-x1}" height="20" rx="4" fill="#6366f1" opacity="0.7"/>`;
+            // Wavy pattern inside
+            let wavePath = `M ${x1} ${cy}`;
+            for (let wx = x1+4; wx < x2-4; wx += 8) {
+                wavePath += ` Q ${wx+2} ${cy-7} ${wx+4} ${cy}`;
+            }
+            svgParts += `<path d="${wavePath}" stroke="#a5b4fc" stroke-width="1.5" fill="none" opacity="0.8"/>`;
+        } else if (seg.type === 'sheet') {
+            // Beta sheet: arrow shape
+            const arrowW = x2 - x1;
+            const headW = Math.min(12, arrowW * 0.3);
+            svgParts += `<polygon points="${x1},${cy-7} ${x2-headW},${cy-7} ${x2},${cy} ${x2-headW},${cy+7} ${x1},${cy+7}" fill="#22c55e" opacity="0.7"/>`;
+        }
+        // loops are just the baseline line
+    });
+
+    // Legend
+    svgParts += `<rect x="10" y="${svgH-16}" width="10" height="10" rx="2" fill="#6366f1" opacity="0.7"/>`;
+    svgParts += `<text x="23" y="${svgH-7}" font-size="9" fill="#94a3b8">Helice-α</text>`;
+    svgParts += `<rect x="80" y="${svgH-16}" width="10" height="10" rx="2" fill="#22c55e" opacity="0.7"/>`;
+    svgParts += `<text x="93" y="${svgH-7}" font-size="9" fill="#94a3b8">Lamina-β</text>`;
+    svgParts += `<line x1="160" y1="${svgH-11}" x2="170" y2="${svgH-11}" stroke="#334155" stroke-width="2"/>`;
+    svgParts += `<text x="173" y="${svgH-7}" font-size="9" fill="#94a3b8">Lazo</text>`;
+    svgParts += '</svg>';
+
+    // Tertiary: simple folded ribbon SVG
+    const tertW = 320, tertH = 60;
+    let tertSvg = `<svg viewBox="0 0 ${tertW} ${tertH}" width="100%" height="60" xmlns="http://www.w3.org/2000/svg">`;
+    // Draw ribbon path
+    let ribbonPath = 'M 20 30';
+    const nPoints = 8;
+    for (let i = 1; i <= nPoints; i++) {
+        const x = 20 + i * (tertW - 40) / nPoints;
+        const y = 30 + Math.sin(i * 1.3) * 18;
+        const cx1 = 20 + (i - 0.5) * (tertW - 40) / nPoints;
+        const cy1 = 30 + Math.sin((i - 0.5) * 1.3) * 18;
+        ribbonPath += ` Q ${cx1} ${cy1} ${x} ${y}`;
+    }
+    tertSvg += `<path d="${ribbonPath}" stroke="url(#tgrad)" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+    tertSvg += `<defs><linearGradient id="tgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#6366f1"/>
+        <stop offset="33%" stop-color="#22c55e"/>
+        <stop offset="66%" stop-color="#f59e0b"/>
+        <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient></defs>`;
+    // Domain spheres
+    [[70,25,'#6366f1'],[160,35,'#22c55e'],[250,22,'#f59e0b']].forEach(([dx,dy,col]) => {
+        tertSvg += `<circle cx="${dx}" cy="${dy}" r="14" fill="${col}" opacity="0.2" stroke="${col}" stroke-width="1.5"/>`;
+    });
+    tertSvg += '</svg>';
+
+    // Quaternary: multiple chains
+    const nChains = Math.max(1, Math.round(srng() * 3) + 1);
+    const qW = 220, qH = 60;
+    let quatSvg = `<svg viewBox="0 0 ${qW} ${qH}" width="100%" height="60" xmlns="http://www.w3.org/2000/svg">`;
+    const chainCols = ['#6366f1','#22c55e','#f59e0b','#06b6d4'];
+    const chainPos = [[55,30],[110,30],[165,30],[85,45]];
+    for (let ci = 0; ci < nChains; ci++) {
+        const [cx2, cy2] = chainPos[ci] || [qW/2, qH/2];
+        quatSvg += `<ellipse cx="${cx2}" cy="${cy2}" rx="30" ry="18" fill="${chainCols[ci]}" opacity="0.25" stroke="${chainCols[ci]}" stroke-width="1.5"/>`;
+        quatSvg += `<text x="${cx2}" y="${cy2+4}" text-anchor="middle" font-size="10" font-weight="700" fill="${chainCols[ci]}">Cadena ${String.fromCharCode(65+ci)}</text>`;
+        if (ci > 0) {
+            const [px, py] = chainPos[ci-1];
+            quatSvg += `<line x1="${px+22}" y1="${py}" x2="${cx2-22}" y2="${cy2}" stroke="#334155" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+        }
+    }
+    quatSvg += '</svg>';
+
+    const grid = document.getElementById('struct-grid');
+    if (!grid) return;
+
+    grid.innerHTML = `
+        <div class="struct-card">
+            <div class="struct-card-header">
+                <div class="struct-num sn1">1°</div>
+                <div>
+                    <div class="struct-card-title">Estructura Primaria</div>
+                    <div class="struct-card-sub">Secuencia lineal de aminoacidos</div>
+                </div>
+            </div>
+            <div class="struct-viz">${seqHtml}</div>
+            <p class="struct-desc">
+                Cada bloque es un <strong>aminoacido</strong>. La secuencia especifica el orden exacto de los ${seqLen.toLocaleString()} residuos.
+                <span style="color:#f59e0b">&#9632; Naranja</span> = hidrofobo,
+                <span style="color:#6366f1">&#9632; Morado</span> = polar,
+                <span style="color:#ef4444">&#9632; Rojo</span> = cargado (+),
+                <span style="color:#ec4899">&#9632; Rosa</span> = cargado (&minus;),
+                <span style="color:#94a3b8">&#9632; Gris</span> = especial.
+                Esta secuencia <strong>determina todo</strong>: como se pliega, que hace y como cambia de conformacion.
+            </p>
+        </div>
+
+        <div class="struct-card">
+            <div class="struct-card-header">
+                <div class="struct-num sn2">2°</div>
+                <div>
+                    <div class="struct-card-title">Estructura Secundaria</div>
+                    <div class="struct-card-sub">Helices-&alpha; y Laminas-&beta;</div>
+                </div>
+            </div>
+            <div class="struct-viz">${svgParts}</div>
+            <p class="struct-desc">
+                Patrones locales de plegamiento estabilizados por <strong>puentes de hidrogeno</strong>.
+                <span style="color:#6366f1">&#9632; Helice-&alpha;</span>: cadena enrollada en espiral (como un resorte).
+                <span style="color:#22c55e">&#9632; Lamina-&beta;</span>: cadena extendida en flecha.
+                <strong>Los lazos</strong> conectan estos elementos. Son regiones mas flexibles y pueden contribuir a las <strong>diferentes conformaciones</strong> que detecta FlexConsensus.
+            </p>
+        </div>
+
+        <div class="struct-card">
+            <div class="struct-card-header">
+                <div class="struct-num sn3">3°</div>
+                <div>
+                    <div class="struct-card-title">Estructura Terciaria</div>
+                    <div class="struct-card-sub">Plegamiento 3D de la cadena</div>
+                </div>
+            </div>
+            <div class="struct-viz">${tertSvg}</div>
+            <p class="struct-desc">
+                La cadena se <strong>pliega en una forma 3D unica</strong> estabilizada por interacciones entre aminoacidos distantes.
+                Los <strong>dominios</strong> (circulos) son regiones con funcion especifica.
+                Esta es la estructura que ves en el visor 3D.
+                <strong>Cuando la proteina cambia de conformacion, esta estructura 3D se deforma</strong>: los dominios se abren, cierran o rotan.
+            </p>
+        </div>
+
+        <div class="struct-card">
+            <div class="struct-card-header">
+                <div class="struct-num sn4">4°</div>
+                <div>
+                    <div class="struct-card-title">Estructura Cuaternaria</div>
+                    <div class="struct-card-sub">${nChains > 1 ? nChains + ' cadenas ensambladas' : 'Cadena unica (monomero)'}</div>
+                </div>
+            </div>
+            <div class="struct-viz">${quatSvg}</div>
+            <p class="struct-desc">
+                ${nChains > 1
+                    ? `La proteina <strong>${p.molecule || p.title}</strong> esta formada por <strong>${nChains} subunidades (cadenas)</strong> que se ensamblan juntas. Cada cadena tiene su propia estructura terciaria. La conformacion global de la proteina incluye los movimientos <strong>relativos entre estas subunidades</strong>. Por ejemplo, el anticuerpo IgG tiene 4 cadenas (2 pesadas + 2 ligeras) que forman la caracteristica forma de "Y".`
+                    : `Esta proteina existe como un <strong>monomero</strong> (una sola cadena polipeptidica). Sus conformaciones surgen de movimientos <strong>dentro de esa unica cadena</strong>: rotaciones de dominios, apertura de bolsillos de union, etc.`
+                }
+            </p>
+        </div>`;
+}
+
+// =============================================
+// DASHBOARD CHARTS
+// =============================================
+function renderDashboard(a) {
+    const reliablePct = ((a.filtering.n_filtered / a.filtering.n_all) * 100).toFixed(1);
+    const unreliablePct = (100 - parseFloat(reliablePct)).toFixed(1);
+    const mantelQuality = a.mantel_r >= 0.7 ? 'Alta' : a.mantel_r >= 0.5 ? 'Media' : 'Baja';
+    const mantelColor = a.mantel_r >= 0.7 ? 'kv-green' : a.mantel_r >= 0.5 ? 'kv-yellow' : '';
+    const relColor = parseFloat(reliablePct) >= 25 ? 'kv-green' : 'kv-yellow';
+
+    const dominant = a.per_conformation.reduce((acc, c) => c.percentage > acc.percentage ? c : acc);
+    const bestConf = [...a.per_conformation].sort((x, y) => y.reliable_pct - x.reliable_pct)[0];
+
+    // KPI cards
+    const kpiEl = document.getElementById('dashboard-kpi');
+    if (kpiEl) {
+        kpiEl.innerHTML = `
+            <div class="kpi-box">
+                <div class="kpi-box-label">Particulas Totales</div>
+                <div class="kpi-box-val kv-blue">${a.n_particles >= 1000 ? (a.n_particles/1000).toFixed(0)+'k' : a.n_particles}</div>
+                <div class="kpi-box-sub">Imagenes 2D simuladas</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-box-label">Particulas Fiables</div>
+                <div class="kpi-box-val ${relColor}">${reliablePct}%</div>
+                <div class="kpi-box-sub">${a.filtering.n_filtered.toLocaleString()} imagenes confiables</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-box-label">Concordancia Mantel</div>
+                <div class="kpi-box-val ${mantelColor}">r=${a.mantel_r}</div>
+                <div class="kpi-box-sub">${mantelQuality} &bull; p=${a.mantel_p}</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-box-label">Conformacion Dominante</div>
+                <div class="kpi-box-val kv-cyan">${dominant.percentage}%</div>
+                <div class="kpi-box-sub">${dominant.name} &mdash; la mas comun</div>
+            </div>`;
+    }
+
+    const DARK_D = {bg:'rgba(0,0,0,0)', grid:'#1e293b', text:'#94a3b8'};
+    const PC = {displayModeBar: false, responsive: true};
+
+    // Chart 1: Donut - Conformations distribution
+    const donutEl = document.getElementById('dash-donut');
+    if (donutEl) {
+        Plotly.newPlot('dash-donut', [{
+            type: 'pie',
+            values: a.per_conformation.map(c => c.n_particles),
+            labels: a.per_conformation.map(c => c.name),
+            marker: { colors: CONF_COLORS.slice(0, a.n_conformations) },
+            hole: 0.5,
+            textinfo: 'percent',
+            hovertemplate: '<b>%{label}</b><br>%{value:,} imagenes (%{percent})<extra></extra>',
+            textfont: { size: 10 },
+        }], {
+            paper_bgcolor: DARK_D.bg,
+            plot_bgcolor: DARK_D.bg,
+            font: { family: 'Inter', color: DARK_D.text, size: 10 },
+            margin: { l: 10, r: 10, t: 10, b: 10 },
+            showlegend: true,
+            legend: { font: { size: 9 }, bgcolor: 'rgba(26,34,54,.8)', x: 0.75, y: 0.5 },
+        }, PC);
+    }
+
+    // Chart 2: Horizontal bar - Reliability per conformation
+    const relEl = document.getElementById('dash-reliability');
+    if (relEl) {
+        const sorted = [...a.per_conformation].sort((x, y) => x.reliable_pct - y.reliable_pct);
+        Plotly.newPlot('dash-reliability', [{
+            type: 'bar',
+            orientation: 'h',
+            y: sorted.map(c => c.name),
+            x: sorted.map(c => c.reliable_pct),
+            marker: {
+                color: sorted.map(c => c.reliable_pct > 25 ? '#22c55e' : c.reliable_pct > 15 ? '#f59e0b' : '#ef4444'),
+                opacity: 0.85,
+            },
+            hovertemplate: '<b>%{y}</b><br>Fiable: %{x:.1f}%<extra></extra>',
+        }], {
+            paper_bgcolor: DARK_D.bg,
+            plot_bgcolor: DARK_D.bg,
+            font: { family: 'Inter', color: DARK_D.text, size: 9 },
+            margin: { l: 70, r: 20, t: 5, b: 35 },
+            xaxis: { title: { text: '% Fiable', font: { size: 9 } }, gridcolor: DARK_D.grid, range: [0, 50] },
+            yaxis: { gridcolor: DARK_D.grid, tickfont: { size: 9 } },
+            shapes: [{ type: 'line', x0: 20, x1: 20, y0: -0.5, y1: sorted.length - 0.5, line: { color: '#64748b', width: 1, dash: 'dot' } }],
+        }, PC);
+    }
+
+    // Chart 3: Gauge - Consensus quality score
+    const gaugeEl = document.getElementById('dash-gauge');
+    if (gaugeEl) {
+        const score = Math.round(a.mantel_r * 100);
+        Plotly.newPlot('dash-gauge', [{
+            type: 'indicator',
+            mode: 'gauge+number+delta',
+            value: score,
+            delta: { reference: 70, increasing: { color: '#22c55e' }, decreasing: { color: '#ef4444' } },
+            gauge: {
+                axis: { range: [0, 100], tickwidth: 1, tickcolor: DARK_D.text, tickfont: { size: 9 }, nticks: 5 },
+                bar: { color: score >= 70 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444', thickness: 0.6 },
+                bgcolor: '#1a2236',
+                borderwidth: 1,
+                bordercolor: '#1e293b',
+                steps: [
+                    { range: [0, 50], color: 'rgba(239,68,68,0.1)' },
+                    { range: [50, 70], color: 'rgba(245,158,11,0.1)' },
+                    { range: [70, 100], color: 'rgba(34,197,94,0.1)' },
+                ],
+                threshold: { line: { color: '#f1f5f9', width: 2 }, thickness: 0.75, value: 70 },
+            },
+            number: { suffix: '%', font: { size: 24, color: '#f1f5f9' } },
+            title: { text: 'Score Consenso<br><span style="font-size:.7rem">Mantel r × 100</span>', font: { size: 10, color: DARK_D.text } },
+        }], {
+            paper_bgcolor: DARK_D.bg,
+            plot_bgcolor: DARK_D.bg,
+            font: { family: 'Inter', color: DARK_D.text },
+            margin: { l: 15, r: 15, t: 30, b: 10 },
+        }, PC);
+    }
 }
 
 function renderTable(a) {

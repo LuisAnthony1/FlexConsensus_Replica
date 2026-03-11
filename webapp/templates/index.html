@@ -22,6 +22,7 @@
     </a>
     <ul class="nav-links">
         <li><a href="#que-es" class="active">Que es</a></li>
+        <li><a href="#algoritmos">Algoritmos</a></li>
         <li><a href="#la-proteina">La Proteina</a></li>
         <li><a href="#el-problema">El Problema</a></li>
         <li><a href="#methodology">Pipeline</a></li>
@@ -154,6 +155,207 @@
                 fuentes para verificar una noticia.
             </p>
         </div>
+    </div>
+</section>
+
+<!-- ============================================ -->
+<!-- SECCION 1.5: COMO FUNCIONAN LOS ALGORITMOS   -->
+<!-- ============================================ -->
+<section class="section" id="algoritmos">
+    <div class="section-header">
+        <div class="icon">&#129504;</div>
+        <div>
+            <h3>Como Funcionan los Algoritmos</h3>
+            <p>Explicacion visual paso a paso de CryoDRGN, HetSIREN y FlexConsensus</p>
+        </div>
+    </div>
+
+    <div class="section-desc">
+        <p>En el analisis de proteinas con Cryo-EM se usan <strong>tres algoritmos</strong>:
+           dos para analizar las imagenes de la proteina de forma independiente
+           (<strong>CryoDRGN</strong> y <strong>HetSIREN</strong>) y uno para combinar sus resultados
+           en un unico consenso confiable (<strong>FlexConsensus</strong>).
+           Aqui puedes ver visualmente como funciona cada uno, paso a paso.</p>
+    </div>
+
+    <div class="algo-section-grid">
+
+        <!-- ======= CryoDRGN ======= -->
+        <div class="algo-diagram">
+            <div class="algo-head">
+                <span class="algo-badge ab-cryodrgn">IA #1 &mdash; MIT</span>
+                <h4>CryoDRGN &mdash; Variational Autoencoder en Espacio de Fourier</h4>
+            </div>
+            <div class="algo-flow">
+                <div class="abox abox-in">
+                    <div class="abox-type">Entrada</div>
+                    <div class="abox-icon">&#128248;</div>
+                    <div class="abox-title">Imagen 2D</div>
+                    <div class="abox-sub">128&times;128 px escala de grises (Cryo-EM)</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-proc">
+                    <div class="abox-type">Paso 1</div>
+                    <div class="abox-icon">&#127758;</div>
+                    <div class="abox-title">FFT Fourier</div>
+                    <div class="abox-sub">Convierte la imagen a frecuencias (amplitud + fase)</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-proc">
+                    <div class="abox-type">Paso 2</div>
+                    <div class="abox-icon">&#129504;</div>
+                    <div class="abox-title">VAE Encoder</div>
+                    <div class="abox-sub">Red neuronal que comprime la imagen. Produce &mu; y &sigma; (media y varianza).</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-lat">
+                    <div class="abox-type">&#9728; Espacio Latente</div>
+                    <div class="abox-icon">&#128200;</div>
+                    <div class="abox-title">Vector z</div>
+                    <div class="abox-sub">8 numeros por imagen. Un punto en el espacio 8D.</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-dec">
+                    <div class="abox-type">Paso 3</div>
+                    <div class="abox-icon">&#128270;</div>
+                    <div class="abox-title">MLP Decoder</div>
+                    <div class="abox-sub">Reconstruye el volumen 3D desde el vector z.</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-out">
+                    <div class="abox-type">Salida</div>
+                    <div class="abox-icon">&#128190;</div>
+                    <div class="abox-title">Volumen 3D</div>
+                    <div class="abox-sub">Mapa de densidad electronica de la proteina.</div>
+                </div>
+            </div>
+            <div class="algo-note">
+                <strong>Como aprende:</strong> Recibe 50,000 imagenes 2D. Para cada imagen el encoder VAE produce un punto en el espacio latente (8 coordenadas). El decoder intenta reconstruir la imagen desde ese punto. Al entrenar, puntos cercanos en el espacio latente = proteinas en poses similares. <strong>Resultado: un mapa 8D donde cada imagen tiene una posicion segun su conformacion.</strong> Trabaja en espacio de Fourier, lo que lo hace eficiente pero puede producir clusters difusos en los bordes entre conformaciones.
+            </div>
+        </div>
+
+        <!-- ======= HetSIREN ======= -->
+        <div class="algo-diagram">
+            <div class="algo-head">
+                <span class="algo-badge ab-hetsiren">IA #2 &mdash; CSIC Madrid</span>
+                <h4>HetSIREN &mdash; Redes Sinusoidales Implicitas en Espacio Real</h4>
+            </div>
+            <div class="algo-flow">
+                <div class="abox abox-in">
+                    <div class="abox-type">Entrada</div>
+                    <div class="abox-icon">&#128248;</div>
+                    <div class="abox-title">Imagen 2D</div>
+                    <div class="abox-sub">128&times;128 px espacio real (sin FFT)</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-proc">
+                    <div class="abox-type">Paso 1</div>
+                    <div class="abox-icon">&#9000;</div>
+                    <div class="abox-title">Correc. CTF</div>
+                    <div class="abox-sub">Corrige la funcion de transferencia de contraste del microscopio.</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-proc">
+                    <div class="abox-type">Paso 2</div>
+                    <div class="abox-icon">&#128204;</div>
+                    <div class="abox-title">SIREN Encoder</div>
+                    <div class="abox-sub">Red con activaciones sin(x). Ideal para funciones continuas.</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-lat">
+                    <div class="abox-type">&#9728; Espacio Latente</div>
+                    <div class="abox-icon">&#128200;</div>
+                    <div class="abox-title">Coord. z</div>
+                    <div class="abox-sub">8 coordenadas (igual dim. que CryoDRGN, distinta organizacion).</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-dec">
+                    <div class="abox-type">Paso 3</div>
+                    <div class="abox-icon">&#128270;</div>
+                    <div class="abox-title">SIREN Decoder</div>
+                    <div class="abox-sub">Funcion continua 3D. Evalua en cualquier punto (x,y,z).</div>
+                </div>
+                <div class="algo-arrow">&#8594;</div>
+                <div class="abox abox-out">
+                    <div class="abox-type">Salida</div>
+                    <div class="abox-icon">&#128190;</div>
+                    <div class="abox-title">Volumen 3D</div>
+                    <div class="abox-sub">Funcion continua: densidad en cualquier posicion del espacio.</div>
+                </div>
+            </div>
+            <div class="algo-note">
+                <strong>Diferencia clave:</strong> Trabaja en espacio real (no Fourier). Las redes SIREN usan sin(x) como activacion, lo que les permite representar funciones continuas con detalles finos. Produce clusters mas definidos pero en orientaciones distintas a CryoDRGN. <strong>Las mismas 50,000 imagenes &rarr; un mapa 8D completamente diferente. Ninguna es "incorrecta": son dos perspectivas complementarias.</strong>
+            </div>
+        </div>
+
+        <!-- ======= FlexConsensus ======= -->
+        <div class="algo-diagram">
+            <div class="algo-head">
+                <span class="algo-badge ab-flexcons">FlexConsensus &mdash; CNB-CSIC Madrid</span>
+                <h4>FlexConsensus &mdash; Multi-Autoencoder de Consenso (Nature Methods 2025)</h4>
+            </div>
+            <div class="algo-fc-layout">
+                <!-- Inputs -->
+                <div class="algo-fc-inputs">
+                    <div class="abox abox-in" style="max-width:none;border-left:3px solid #6366f1;border-top:none;">
+                        <div class="abox-type">Entrada 1</div>
+                        <div class="abox-icon">&#129504;</div>
+                        <div class="abox-title">CryoDRGN Latente</div>
+                        <div class="abox-sub">50,000 vectores 8D (espacio de Fourier)</div>
+                    </div>
+                    <div class="abox abox-in" style="max-width:none;border-left:3px solid #22c55e;border-top:none;">
+                        <div class="abox-type">Entrada 2</div>
+                        <div class="abox-icon">&#128204;</div>
+                        <div class="abox-title">HetSIREN Latente</div>
+                        <div class="abox-sub">50,000 vectores 8D (espacio real)</div>
+                    </div>
+                </div>
+
+                <!-- Center: encoders + decoder -->
+                <div class="algo-fc-center">
+                    <div style="display:flex;align-items:center;gap:0.4rem;color:var(--text-muted);font-size:0.9rem;">
+                        <span>&#8594;</span>
+                        <div class="abox abox-multi" style="min-width:120px;">
+                            <div class="abox-type">Encoders x2</div>
+                            <div class="abox-icon">&#9881;</div>
+                            <div class="abox-title">2 Codificadores</div>
+                            <div class="abox-sub">Uno por metodo. Mapean al espacio comun.</div>
+                        </div>
+                        <span>&#8594;</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.4rem;color:var(--text-muted);font-size:0.9rem;">
+                        <span style="opacity:0">&#8594;</span>
+                        <div class="abox abox-multi" style="min-width:120px;border-color:#f59e0b;">
+                            <div class="abox-type">Decoder Compartido</div>
+                            <div class="abox-icon">&#127919;</div>
+                            <div class="abox-title">1 Decodificador</div>
+                            <div class="abox-sub">Compartido. Fuerza que ambos espacios sean coherentes.</div>
+                        </div>
+                        <span style="opacity:0">&#8594;</span>
+                    </div>
+                </div>
+
+                <!-- Outputs -->
+                <div class="algo-fc-outputs">
+                    <div class="abox abox-out" style="max-width:none;border-left:3px solid #f59e0b;border-top:none;">
+                        <div class="abox-type">Salida 1</div>
+                        <div class="abox-icon">&#127758;</div>
+                        <div class="abox-title">Espacio Consenso</div>
+                        <div class="abox-sub">Mapa unificado 8D donde ambos metodos estan alineados.</div>
+                    </div>
+                    <div class="abox abox-out" style="max-width:none;border-left:3px solid #ef4444;border-top:none;">
+                        <div class="abox-type">Salida 2</div>
+                        <div class="abox-icon">&#128202;</div>
+                        <div class="abox-title">Consensus Error</div>
+                        <div class="abox-sub">Un numero por imagen: distancia entre los dos encoders en el espacio comun.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="algo-note">
+                <strong>Como funciona el entrenamiento:</strong> El multi-autoencoder tiene <strong>N encoders</strong> (uno por metodo de IA) y <strong>1 decoder compartido</strong>. Cada encoder recibe el espacio latente de su metodo y lo proyecta al espacio de consenso. El decoder compartido intenta reconstruir la imagen original desde cualquiera de los dos espacios proyectados. Al tener que satisfacer a ambos encoders con el mismo decoder, el modelo es <em>forzado</em> a encontrar un espacio comun coherente. El <strong>consensus error</strong> de cada imagen es la distancia entre su posicion segun el encoder 1 y su posicion segun el encoder 2 en el espacio de consenso. <strong>Distancia pequena = ambas IAs coinciden = CONFIABLE. Distancia grande = las IAs discrepan = DUDOSO.</strong>
+            </div>
+        </div>
+
     </div>
 </section>
 
@@ -392,13 +594,13 @@
     <div class="section-header">
         <div class="icon">&#9673;</div>
         <div>
-            <h3>Espacios Latentes 3D: CryoDRGN vs HetSIREN</h3>
-            <p>Asi se ven los "mapas" del IgG generados por cada IA &mdash; nota las diferencias</p>
+            <h3>Paisajes Conformacionales: CryoDRGN vs HetSIREN</h3>
+            <p>Mapas de densidad 2D del IgG (estilo figuras del paper) &mdash; nota las diferencias</p>
         </div>
     </div>
 
     <div class="section-desc">
-        <p><strong>Que estas viendo:</strong> Cada punto de color es una de las 50,000 fotos del anticuerpo IgG (mostramos 5,000 por rendimiento).
+        <p><strong>Que estas viendo:</strong> Mapa de densidad 2D (KDE - Kernel Density Estimation) del anticuerpo IgG. El color de fondo indica la <strong>densidad de particulas</strong>: negro = ninguna particula, verde/amarillo = muchas particulas (como en las figuras del paper). Cada punto coloreado encima es una particula individual.
            Los <strong>5 colores</strong> representan las 5 conformaciones del anticuerpo:
            <span style="color:#6366f1">&#9632; Abierta</span>,
            <span style="color:#22c55e">&#9632; Semi-abierta</span>,
@@ -484,6 +686,10 @@
                 <button class="method-tab" onclick="showConsensus('errors')">
                     Por Consensus Error
                     <span class="tab-hint">Verde = fiable, Amarillo = dudoso</span>
+                </button>
+                <button class="method-tab" onclick="showConsensus('paper')">
+                    Full vs Significant (Paper)
+                    <span class="tab-hint">Replica Figs 1-2 del paper</span>
                 </button>
             </div>
             <div class="chart-body" id="chart-consensus" style="min-height:500px;"></div>

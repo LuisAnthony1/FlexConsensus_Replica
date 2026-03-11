@@ -322,6 +322,19 @@
     <!-- Stats row -->
     <div class="results-stats" id="results-stats"></div>
 
+    <!-- Protein Structure Levels -->
+    <div class="results-section">
+        <div class="rs-step-badge">ESTRUCTURA MOLECULAR</div>
+        <div class="rs-header">
+            <h3>Niveles de Estructura de la Proteina</h3>
+        </div>
+        <div class="rs-explanation" id="explain-structure"></div>
+        <div class="struct-section">
+            <div class="struct-section-label">&#128300; Organizacion Estructural de la Proteina</div>
+            <div class="struct-grid" id="struct-grid"></div>
+        </div>
+    </div>
+
     <!-- Cryo-EM Gallery: simulated projection images -->
     <div class="results-section" id="section-cryoem-gallery">
         <div class="rs-step-badge">LAS "FOTOS" CRYO-EM</div>
@@ -404,6 +417,31 @@
             </div>
         </div>
         <div class="rs-insight" id="insight-error"></div>
+    </div>
+
+    <!-- DASHBOARD: Metricas visuales -->
+    <div class="results-section">
+        <div class="rs-step-badge">DASHBOARD DE ANALISIS</div>
+        <div class="rs-header">
+            <h3>Resumen Visual de Metricas Clave</h3>
+        </div>
+        <div class="dashboard-wrap" id="dashboard-wrap">
+            <div class="dashboard-kpi" id="dashboard-kpi"></div>
+            <div class="dashboard-charts">
+                <div class="dash-plot-box">
+                    <div class="dash-plot-label">Distribucion de Conformaciones</div>
+                    <div class="dash-plot-area" id="dash-donut"></div>
+                </div>
+                <div class="dash-plot-box">
+                    <div class="dash-plot-label">Fiabilidad por Conformacion (%)</div>
+                    <div class="dash-plot-area" id="dash-reliability"></div>
+                </div>
+                <div class="dash-plot-box">
+                    <div class="dash-plot-label">Score de Consenso (Indicador)</div>
+                    <div class="dash-plot-area" id="dash-gauge"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- PASO 5: Tabla detallada -->
