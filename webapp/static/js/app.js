@@ -768,6 +768,9 @@ function renderResults(a) {
 
     renderTable(a);
 
+    // ESPECIALISTA
+    renderSpecialist(a, p);
+
     // CONCLUSIONES
     document.getElementById('conclusions-box').innerHTML = `
         <div class="concl-card">
@@ -1438,6 +1441,155 @@ function renderDashboard(a) {
             margin: { l: 15, r: 15, t: 30, b: 10 },
         }, PC);
     }
+}
+
+// =============================================
+// SPECIALIST ANALYSIS PANEL
+// =============================================
+function renderSpecialist(a, p) {
+    const el = document.getElementById('specialist-panel');
+    if (!el) return;
+
+    const name = p.molecule || p.title || p.pdb_id;
+    const reliablePct = ((a.filtering.n_filtered / a.filtering.n_all) * 100).toFixed(1);
+    const unreliablePct = (100 - parseFloat(reliablePct)).toFixed(1);
+    const dominant = a.per_conformation.reduce((acc, c) => acc.percentage > c.percentage ? acc : c);
+    const sorted = [...a.per_conformation].sort((x, y) => y.reliable_pct - x.reliable_pct);
+    const bestConf = sorted[0];
+    const worstConf = sorted[sorted.length - 1];
+
+    // === LANDSCAPE ANALYSIS ===
+    const landscapeText = (() => {
+        const nConf = a.n_conformations;
+        const pct = parseFloat(reliablePct);
+        if (nConf >= 5)
+            return `El paisaje conformacional muestra <strong>${nConf} regiones de densidad diferenciadas</strong> en el espacio latente. La presencia de multiples clusters bien separados indica que <em>${name}</em> es una proteina con <strong>alta heterogeneidad conformacional</strong>. En los mapas KDE (fondo negro = baja densidad, amarillo = alta densidad), cada "isla" caliente corresponde a una conformacion estable. La separacion entre clusters es clave: mayor separacion = conformaciones mas distintas entre si.`;
+        if (nConf >= 3)
+            return `El paisaje muestra <strong>${nConf} clusters de densidad</strong> claramente distinguibles. Los gradientes de color negro-verde-amarillo revelan la distribucion de las ${a.n_particles.toLocaleString()} particulas: <strong>amarillo/verde = zona muy poblada</strong> (conformacion dominante), <strong>verde oscuro = zona intermedia</strong>. La forma de cada cluster indica la rigidez conformacional: clusters compactos = conformacion rigida, clusters elongados = transicion continua.`;
+        return `El paisaje conformacional presenta <strong>${nConf} estados</strong> principales. Los mapas KDE muestran una distribucion de densidad con picos bien definidos. La similitud entre los mapas de CryoDRGN y HetSIREN (ambas vistas deben mostrar la misma topologia global aunque con orientaciones distintas) es una buena senal de que los resultados son reproducibles.`;
+    })();
+
+    // === METHODS COMPARISON ===
+    const methodsText = (() => {
+        const r = a.mantel_r;
+        const tag = r > 0.7 ? '<span class="sp-tag">Alta concordancia</span>' : r > 0.5 ? '<span class="sp-tag warn">Concordancia moderada</span>' : '<span class="sp-tag bad">Baja concordancia</span>';
+        return `Los graficos de CryoDRGN y HetSIREN muestran los mismos datos desde dos perspectivas matematicamente distintas. ${tag} CryoDRGN (izq.) opera en <strong>espacio de Fourier</strong> usando un VAE; HetSIREN (der.) usa <strong>redes SIREN en espacio real</strong>. Aunque la orientacion y escala de los ejes difiere entre ambos mapas (es normal), la <strong>topologia relativa de los clusters</strong> debe ser similar. El test de Mantel r = <strong>${r}</strong> (p = ${a.mantel_p}) cuantifica esta similitud de topologias.`;
+    })();
+
+    // === CONSENSUS QUALITY ===
+    const consensusText = (() => {
+        const r = a.mantel_r;
+        if (r > 0.7)
+            return `El espacio de consenso FlexConsensus muestra una <strong>alineacion excelente</strong> (Mantel r = ${r}) entre ambas IAs. En el grafico "Por Conformacion", los clusters deberian estar bien separados con fronteras nitidas. En el grafico "Por Error" (verde → rojo), la mayoria de particulas deberian aparecer en verde, concentradas en el centro de los clusters. En el grafico "Subespacio", los puntos azules (CryoDRGN) y verdes (HetSIREN) deberian solaparse casi perfectamente &mdash; lo que confirma que ambas IAs "ven" lo mismo.`;
+        if (r > 0.5)
+            return `El espacio de consenso muestra una <strong>alineacion moderada</strong> (r = ${r}). En el grafico "Por Error", observaras una mezcla de puntos verdes (fiables) y amarillos/naranjas (dudosos). Los puntos rojos en los bordes de los clusters indican particulas donde CryoDRGN y HetSIREN discrepan en la asignacion conformacional. En el grafico "Subespacio", el solapamiento parcial entre azul y verde refleja esta concordancia incompleta.`;
+        return `El espacio de consenso indica <strong>dificultad de alineacion</strong> (r = ${r}). Esto puede deberse a que <em>${name}</em> tiene movimientos conformacionales continuos sin estados discretos bien definidos, o a limitaciones del dataset simulado. En el grafico "Por Error", abundan puntos rojos/amarillos, lo que indica alta incertidumbre en la asignacion de conformaciones.`;
+    })();
+
+    // === ERROR HISTOGRAM ===
+    const histText = (() => {
+        const pct = parseFloat(reliablePct);
+        const n = a.filtering.n_filtered.toLocaleString();
+        if (pct > 30)
+            return `El histograma de "Consensus Error" muestra una distribucion <strong>asimetrica hacia la izquierda</strong>: la mayoria de las ${a.n_particles.toLocaleString()} particulas tienen error bajo. La linea vertical verde (<strong>umbral P20</strong>) separa el 20% mas fiable. Con <strong>${pct}% de particulas fiables</strong> (${n} imagenes), el dataset presenta muy buena calidad. La forma del histograma debe mostrar un pico estrecho cerca de cero seguido de una cola larga hacia la derecha: cuanto mas estrecho el pico, mas homogenea es la muestra.`;
+        if (pct > 15)
+            return `El histograma muestra que la mayoria de particulas tienen error <strong>concentrado en el rango bajo-medio</strong>. El <strong>${pct}%</strong> que cae a la izquierda del umbral P20 (linea verde) son las particulas mas confiables. El umbral P80 (linea roja) marca donde los errores son considerados no confiables. Esta distribucion es tipica de proteinas con conformaciones heterogeneas pero bien definidas.`;
+        return `El histograma presenta una distribucion <strong>amplia y aplanada</strong>, con muchas particulas en el rango de error alto. Solo el <strong>${pct}%</strong> (${n} imagenes) cae en la zona fiable (izquierda del P20). Esto es caracteristico de proteinas con <strong>heterogeneidad continua</strong> o datasets con mucho ruido en las imagenes Cryo-EM simuladas.`;
+    })();
+
+    // === FILTERING ===
+    const filterText = (() => {
+        const pct = parseFloat(reliablePct);
+        const n = a.filtering.n_filtered.toLocaleString();
+        return `El grafico de filtrado compara <strong>el espacio completo</strong> (fondo gris/azul oscuro, KDE de todas las ${a.filtering.n_all.toLocaleString()} particulas) con <strong>las particulas fiables</strong> (puntos de colores, solo las ${n} con menor consensus error). Observa como los puntos de colores se concentran en los <strong>centros de los clusters</strong>: esto confirma que las particulas confiables son las que ambas IAs clasifican con mayor certeza. Las conformaciones con mas puntos coloreados son las mas robustas. <strong>${bestConf.name}</strong> muestra la mayor fiabilidad (${bestConf.reliable_pct}%) mientras que <strong>${worstConf.name}</strong> es la menos confiable (${worstConf.reliable_pct}%).`;
+    })();
+
+    // === DASHBOARD ===
+    const dashText = (() => {
+        const dom = dominant;
+        const r = a.mantel_r;
+        const score = Math.round(r * 100);
+        return `El <strong>grafico de dona</strong> muestra la distribucion porcentual de las ${a.n_particles.toLocaleString()} particulas entre las ${a.n_conformations} conformaciones. La conformacion dominante es <strong>${dom.name} (${dom.percentage}%)</strong>. El <strong>grafico de barras</strong> ordena las conformaciones por porcentaje de particulas fiables; barras verdes indican alta fiabilidad (&gt;25%), amarillas moderada, rojas baja. El <strong>indicador de aguja (gauge)</strong> muestra el Score de Consenso = ${score}/100 (Mantel r × 100): valores &ge;70 (zona verde) indican que ambas IAs tienen alta concordancia y los resultados son publicables.`;
+    })();
+
+    // === SCIENTIFIC SIGNIFICANCE ===
+    const sciText = (() => {
+        const nConf = a.n_conformations;
+        const r = a.mantel_r;
+        const pct = parseFloat(reliablePct);
+        const flexibility = nConf > 4 ? 'alta flexibilidad conformacional' : nConf > 2 ? 'flexibilidad moderada' : 'relativa rigidez estructural';
+        return `Los resultados de FlexConsensus para <em>${name}</em> revelan <strong>${flexibility}</strong> con ${nConf} estados conformacionales detectados. Desde el punto de vista biofarmaceutico, esto significa que cualquier inhibidor o anticuerpo disenado contra <em>${name}</em> debe ser evaluado en <strong>todas las conformaciones</strong>, no solo en el estado cristalizado. La tasa de fiabilidad del ${pct}% sugiere que ${pct > 25 ? 'el dataset es de alta calidad y los resultados son reproducibles con Cryo-EM experimental' : pct > 15 ? 'se requeriria aumentar el numero de particulas en un experimento real para mejorar la confianza' : 'se necesitaria optimizacion del protocolo de preparacion de muestra Cryo-EM antes de publicar'}. La concordancia entre metodos (r = ${r}) ${r > 0.7 ? 'es suficiente para reportar estos resultados como hallazgos robustos en una publicacion cientifica' : r > 0.5 ? 'sugiere que los metodos capturan la misma heterogeneidad aunque con distintas perspectivas' : 'indica que se beneficiaria de metodos adicionales de validacion'}.`;
+    })();
+
+    // Update filtering legend dynamically
+    const legConfs = document.getElementById('legend-filter-confs');
+    if (legConfs) {
+        legConfs.innerHTML = a.per_conformation.map((c, i) =>
+            `<span class="cleg-item"><span class="cleg-dot" style="background:${CONF_COLORS[i]}"></span>${c.name}</span>`
+        ).join('');
+    }
+
+    el.innerHTML = `
+    <div class="specialist-panel">
+        <div class="specialist-header">
+            <div class="specialist-avatar">&#128300;</div>
+            <div>
+                <div class="specialist-name">Dra. FlexAnalyst &mdash; Sistema de Interpretacion Automatizada</div>
+                <div class="specialist-title">Analisis experto de resultados FlexConsensus &bull; Basado en metodologia del paper Nature Methods 2025</div>
+            </div>
+            <div class="specialist-badge-tag">&#9989; Analisis completado</div>
+        </div>
+        <div class="specialist-body">
+            <div class="sp-card">
+                <div class="sp-card-header">
+                    <div class="sp-icon cyan">&#127755;</div>
+                    <div class="sp-card-title">Paisaje Conformacional (KDE)</div>
+                </div>
+                <p>${landscapeText}</p>
+            </div>
+            <div class="sp-card">
+                <div class="sp-card-header">
+                    <div class="sp-icon indigo">&#129504;</div>
+                    <div class="sp-card-title">Comparacion de Metodos (CryoDRGN vs HetSIREN)</div>
+                </div>
+                <p>${methodsText}</p>
+            </div>
+            <div class="sp-card">
+                <div class="sp-card-header">
+                    <div class="sp-icon violet">&#128279;</div>
+                    <div class="sp-card-title">Espacio de Consenso FlexConsensus</div>
+                </div>
+                <p>${consensusText}</p>
+            </div>
+            <div class="sp-card">
+                <div class="sp-card-header">
+                    <div class="sp-icon amber">&#128200;</div>
+                    <div class="sp-card-title">Histograma de Error &amp; Fiabilidad</div>
+                </div>
+                <p>${histText}</p>
+            </div>
+            <div class="sp-card">
+                <div class="sp-card-header">
+                    <div class="sp-icon green">&#128247;</div>
+                    <div class="sp-card-title">Filtrado de Particulas Significativas</div>
+                </div>
+                <p>${filterText}</p>
+            </div>
+            <div class="sp-card">
+                <div class="sp-card-header">
+                    <div class="sp-icon rose">&#128202;</div>
+                    <div class="sp-card-title">Dashboard de Metricas</div>
+                </div>
+                <p>${dashText}</p>
+            </div>
+        </div>
+        <div class="specialist-footer">
+            <div class="sp-footer-icon">&#128218;</div>
+            <div class="sp-footer-text">
+                <strong>Significado cientifico de ${name}:</strong> ${sciText}
+            </div>
+        </div>
+    </div>`;
 }
 
 function renderTable(a) {

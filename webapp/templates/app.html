@@ -410,10 +410,21 @@
             <div class="chart-box">
                 <div class="chart-label">Distribucion de Consensus Error <span>Verde = fiable, Rojo = no fiable</span></div>
                 <div id="chart-histogram" class="chart-area"></div>
+                <div class="chart-legend-strip">
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#22c55e"></span>Fiable (P20 inferior)</span>
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#6366f1"></span>Intermedio (P20–P80)</span>
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#ef4444"></span>Dudoso (P80 superior)</span>
+                    <span class="cleg-item"><span class="cleg-dash" style="border-color:#22c55e"></span>Umbral P20</span>
+                    <span class="cleg-item"><span class="cleg-dash" style="border-color:#ef4444"></span>Umbral P80</span>
+                </div>
             </div>
             <div class="chart-box">
                 <div class="chart-label">Filtrado: Todas vs Solo Fiables <span>Gris = todas, Color = fiables (P20)</span></div>
                 <div id="chart-filter" class="chart-area"></div>
+                <div class="chart-legend-strip" id="legend-filter">
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#2e4050"></span>Todas las particulas (KDE densidad)</span>
+                    <span class="cleg-item" id="legend-filter-confs"></span>
+                </div>
             </div>
         </div>
         <div class="rs-insight" id="insight-error"></div>
@@ -461,6 +472,16 @@
             <h3>Que concluimos sobre esta proteina?</h3>
         </div>
         <div class="conclusions-box" id="conclusions-box"></div>
+    </div>
+
+    <!-- ESPECIALISTA IA: Interpretacion Experta -->
+    <div class="results-section">
+        <div class="rs-step-badge specialist-badge">INTERPRETACION DEL ESPECIALISTA</div>
+        <div class="rs-header">
+            <h3>Que nos dicen estos graficos? &mdash; Analisis Experto</h3>
+            <p class="rs-subtitle">Interpretacion automatizada basada en los resultados del analisis FlexConsensus</p>
+        </div>
+        <div id="specialist-panel"></div>
     </div>
 </div>
 
