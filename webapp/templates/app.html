@@ -158,6 +158,48 @@
                 </div>
             </div>
 
+            <!-- Leyenda explicativa de cada parametro -->
+            <div class="config-legend">
+                <div class="config-legend-title">Que significa cada parametro?</div>
+                <div class="config-legend-items">
+                    <div class="config-legend-item">
+                        <div class="cli-header">Particulas a simular</div>
+                        <div class="cli-body">
+                            Es la cantidad de <strong>"fotos" 2D</strong> que el microscopio Cryo-EM toma de la proteina congelada.
+                            Cada foto captura la proteina en una pose aleatoria.
+                            <div class="cli-options">
+                                <span><strong>10,000</strong> &rarr; Analisis rapido, menos detalle. Util para una vista previa.</span>
+                                <span><strong>30,000</strong> &rarr; Balance entre velocidad y detalle. Recomendado.</span>
+                                <span><strong>50,000</strong> &rarr; Cantidad usada en el paper original. Maximo detalle pero mas lento.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="config-legend-item">
+                        <div class="cli-header">Metodos de IA</div>
+                        <div class="cli-body">
+                            Cuantas inteligencias artificiales <strong>analizan las fotos por separado</strong>.
+                            FlexConsensus compara sus resultados para ver en que coinciden (confiable) y en que no (dudoso).
+                            <div class="cli-options">
+                                <span><strong>2 metodos</strong> &rarr; CryoDRGN (VAE en Fourier) + HetSIREN (SIREN en espacio real). Es el minimo para comparar.</span>
+                                <span><strong>3 metodos</strong> &rarr; Agrega cryoSPARC 3DVA. Mas opiniones = consenso mas robusto, pero mas lento.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="config-legend-item">
+                        <div class="cli-header">Dimension latente</div>
+                        <div class="cli-body">
+                            El <strong>"vocabulario"</strong> que usa la IA para describir las poses de la proteina.
+                            Imagina que describes una mano: con 4 palabras dices "abierta/cerrada/arriba/abajo", con 16 palabras puedes describir cada dedo.
+                            <div class="cli-options">
+                                <span><strong>4 dim.</strong> &rarr; Descripcion simple. Captura solo los movimientos grandes (ej: proteina abierta vs cerrada).</span>
+                                <span><strong>8 dim.</strong> &rarr; Usado en el paper. Buen balance entre detalle y estabilidad.</span>
+                                <span><strong>16 dim.</strong> &rarr; Descripcion muy detallada. Captura movimientos sutiles, pero puede ser ruidoso.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">
                 <span class="analyze-icon">&#9654;</span>
                 Ejecutar Analisis FlexConsensus
