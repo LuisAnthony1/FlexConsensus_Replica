@@ -25,20 +25,47 @@ let isSpinning = false;
 let isResultsSpinning = false;
 
 // =============================================
-// VIEW MANAGEMENT
+// VIEW / TAB MANAGEMENT
 // =============================================
-function showView(name) {
+
+// Show a top-level tab (inicio | busqueda | resultados)
+function showTab(name) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-' + name).classList.add('active');
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    const viewId = name === 'busqueda' ? 'view-busqueda' : name === 'resultados' ? 'view-results' : 'view-inicio';
+    const el = document.getElementById(viewId);
+    if (el) el.classList.add('active');
+    const tab = document.getElementById('tab-' + name);
+    if (tab) tab.classList.add('active');
     window.scrollTo(0, 0);
 
     const status = document.getElementById('nav-status');
-    if (name === 'results' && currentProtein) {
-        status.innerHTML = `<span class="dot"></span> Analisis: ${currentProtein.pdb_id}`;
-    } else if (name === 'protein' && currentProtein) {
+    if (name === 'resultados' && currentProtein) {
+        status.innerHTML = `<span class="dot"></span> ${currentProtein.pdb_id}`;
+    } else if (name === 'busqueda' && currentProtein) {
         status.innerHTML = currentProtein.pdb_id;
     } else {
         status.innerHTML = '';
+    }
+}
+
+// Show a sub-view inside view-busqueda
+function showSubView(name) {
+    document.querySelectorAll('#view-busqueda .sub-view').forEach(v => v.classList.remove('active'));
+    const el = document.getElementById('view-' + name);
+    if (el) el.classList.add('active');
+}
+
+// Legacy shim — keep old showView calls working
+function showView(name) {
+    if (name === 'search') { showTab('busqueda'); showSubView('search'); }
+    else if (name === 'protein') { showTab('busqueda'); showSubView('protein'); }
+    else if (name === 'loading') { showTab('busqueda'); showSubView('loading'); }
+    else if (name === 'results') {
+        // Enable resultados tab
+        const tab = document.getElementById('tab-resultados');
+        if (tab) tab.disabled = false;
+        showTab('resultados');
     }
 }
 
@@ -1408,12 +1435,9 @@ function renderDashboard(a) {
 }
 
 // =============================================
-// SPECIALIST ANALYSIS PANEL
+// SPECIALIST ANALYSIS — inline below each section
 // =============================================
 function renderSpecialist(a, p) {
-    const el = document.getElementById('specialist-panel');
-    if (!el) return;
-
     const name = p.molecule || p.title || p.pdb_id;
     const reliablePct = ((a.filtering.n_filtered / a.filtering.n_all) * 100).toFixed(1);
     const unreliablePct = (100 - parseFloat(reliablePct)).toFixed(1);
@@ -1485,75 +1509,54 @@ function renderSpecialist(a, p) {
         return `Los resultados de FlexConsensus para <em>${name}</em> revelan <strong>${flexibility}</strong> con ${nConf} estados conformacionales detectados. Desde el punto de vista biofarmaceutico, esto significa que cualquier inhibidor o anticuerpo disenado contra <em>${name}</em> debe ser evaluado en <strong>todas las conformaciones</strong>, no solo en el estado cristalizado. La tasa de fiabilidad del ${pct}% sugiere que ${pct > 25 ? 'el dataset es de alta calidad y los resultados son reproducibles con Cryo-EM experimental' : pct > 15 ? 'se requeriria aumentar el numero de particulas en un experimento real para mejorar la confianza' : 'se necesitaria optimizacion del protocolo de preparacion de muestra Cryo-EM antes de publicar'}. La concordancia entre metodos (r = ${r}) ${r > 0.7 ? 'es suficiente para reportar estos resultados como hallazgos robustos en una publicacion cientifica' : r > 0.5 ? 'sugiere que los metodos capturan la misma heterogeneidad aunque con distintas perspectivas' : 'indica que se beneficiaria de metodos adicionales de validacion'}.`;
     })();
 
-    // Update filtering legend dynamically
+    function spCard(icon, label, text) {
+        return `<div class="sp-inline-card">
+            <div class="sp-inline-header"><span>${icon}</span> Sistema de Interpretacion Automatizada &mdash; ${label}</div>
+            <div class="sp-inline-body">${text}</div>
+        </div>`;
+    }
+
+    // Methods
+    const elMethods = document.getElementById('sp-methods');
+    if (elMethods) {
+        const r = a.mantel_r;
+        const tag = r > 0.7 ? '<span class="sp-tag">Alta concordancia</span>' : r > 0.5 ? '<span class="sp-tag warn">Concordancia moderada</span>' : '<span class="sp-tag bad">Baja concordancia</span>';
+        elMethods.innerHTML = spCard('&#128300;', 'Paisaje Conformacional',
+            `Estos dos graficos muestran las mismas <strong>${a.n_particles.toLocaleString()} imagenes</strong> de <em>${name}</em> organizadas de forma diferente por cada IA. ${tag} (Mantel r = <strong>${r}</strong>, p = ${a.mantel_p}). <strong>Que buscar:</strong> que ambos mapas muestren el mismo numero de clusters bien separados. La orientacion de los ejes es diferente entre ambos (es normal). En el fondo KDE, <strong>amarillo/verde = zonas densas</strong> (conformaciones comunes), <strong>negro = zonas vacias</strong>. CryoDRGN trabaja en espacio de Fourier; HetSIREN en espacio real, por eso los clusters tienen formas distintas aunque representen las mismas conformaciones.`);
+    }
+
+    // Consensus
+    const elCons = document.getElementById('sp-consensus');
+    if (elCons) {
+        const r = a.mantel_r;
+        elCons.innerHTML = spCard('&#128279;', 'Espacio de Consenso',
+            `FlexConsensus alinea los dos mapas en uno solo. <strong>"Por Conformacion":</strong> cada color es una conformacion &mdash; busca grupos bien separados sin solapamiento. <strong>"Por Error":</strong> <span style="color:#22c55e">verde</span> = ambas IAs coinciden (confiable), <span style="color:#ef4444">rojo</span> = discrepan (dudoso) &mdash; los puntos rojos aparecen en los bordes entre clusters. <strong>"Subespacio":</strong> azul (CryoDRGN) y verde (HetSIREN) en el mismo espacio &mdash; cuanto mas se solapan, mayor concordancia (r = ${r}). ${r > 0.7 ? 'Solapamiento excelente: ambas IAs ven lo mismo.' : r > 0.5 ? 'Solapamiento parcial: coinciden en lo general, difieren en detalles.' : 'Solapamiento bajo: las IAs tienen perspectivas muy distintas de esta proteina.'}`);
+    }
+
+    // Errors
+    const elErrors = document.getElementById('sp-errors');
+    if (elErrors) {
+        const n = a.filtering.n_filtered.toLocaleString();
+        const pct = parseFloat(reliablePct);
+        elErrors.innerHTML = spCard('&#128200;', 'Error y Filtrado',
+            `<strong>Histograma (izq.):</strong> distribucion del consensus error para las ${a.n_particles.toLocaleString()} imagenes. Linea verde (P20) = limite de fiabilidad, ${reliablePct}% de imagenes (${n}) estan a la izquierda = son confiables. Linea roja (P80) = zona no confiable. Pico estrecho y hacia la izquierda = buena calidad. <strong>Filtrado (der.):</strong> el fondo gris-azul (KDE) muestra todas las particulas; los puntos de colores son solo las ${n} confiables. ${pct > 25 ? 'Los puntos coloreados se concentran en los centros de los clusters — excelente calidad.' : pct > 15 ? 'Buena cobertura de los clusters con las particulas confiables.' : 'Pocas particulas confiables: considera mas particulas en el analisis.'} <strong>${bestConf.name}</strong> es la mas confiable (${bestConf.reliable_pct}%); <strong>${worstConf.name}</strong> la menos (${worstConf.reliable_pct}%).`);
+    }
+
+    // Dashboard
+    const elDash = document.getElementById('sp-dashboard');
+    if (elDash) {
+        const score = Math.round(a.mantel_r * 100);
+        elDash.innerHTML = spCard('&#128202;', 'Dashboard de Metricas',
+            `<strong>Dona:</strong> proporcion de cada conformacion. Dominante: <strong>${dominant.name} (${dominant.percentage}%)</strong>. <strong>Barras:</strong> fiabilidad por conformacion &mdash; verde (&gt;25%) = robusta, amarilla (15-25%) = aceptable, roja (&lt;15%) = necesita mas datos. <strong>Gauge:</strong> Score de Consenso ${score}/100 = Mantel r &times; 100. ${score >= 70 ? 'Zona verde ✓ — resultados publicables con alta confianza.' : score >= 50 ? 'Zona amarilla — resultados validos con reservas.' : 'Zona roja — revisar protocolo de analisis.'}`);
+    }
+
+    // Update filtering legend
     const legConfs = document.getElementById('legend-filter-confs');
     if (legConfs) {
         legConfs.innerHTML = a.per_conformation.map((c, i) =>
             `<span class="cleg-item"><span class="cleg-dot" style="background:${CONF_COLORS[i]}"></span>${c.name}</span>`
         ).join('');
     }
-
-    el.innerHTML = `
-    <div class="specialist-panel">
-        <div class="specialist-header">
-            <div class="specialist-avatar">&#128300;</div>
-            <div>
-                <div class="specialist-name">Dra. FlexAnalyst &mdash; Sistema de Interpretacion Automatizada</div>
-                <div class="specialist-title">Analisis experto de resultados FlexConsensus &bull; Basado en metodologia del paper Nature Methods 2025</div>
-            </div>
-            <div class="specialist-badge-tag">&#9989; Analisis completado</div>
-        </div>
-        <div class="specialist-body">
-            <div class="sp-card">
-                <div class="sp-card-header">
-                    <div class="sp-icon cyan">&#127755;</div>
-                    <div class="sp-card-title">Paisaje Conformacional (KDE)</div>
-                </div>
-                <p>${landscapeText}</p>
-            </div>
-            <div class="sp-card">
-                <div class="sp-card-header">
-                    <div class="sp-icon indigo">&#129504;</div>
-                    <div class="sp-card-title">Comparacion de Metodos (CryoDRGN vs HetSIREN)</div>
-                </div>
-                <p>${methodsText}</p>
-            </div>
-            <div class="sp-card">
-                <div class="sp-card-header">
-                    <div class="sp-icon violet">&#128279;</div>
-                    <div class="sp-card-title">Espacio de Consenso FlexConsensus</div>
-                </div>
-                <p>${consensusText}</p>
-            </div>
-            <div class="sp-card">
-                <div class="sp-card-header">
-                    <div class="sp-icon amber">&#128200;</div>
-                    <div class="sp-card-title">Histograma de Error &amp; Fiabilidad</div>
-                </div>
-                <p>${histText}</p>
-            </div>
-            <div class="sp-card">
-                <div class="sp-card-header">
-                    <div class="sp-icon green">&#128247;</div>
-                    <div class="sp-card-title">Filtrado de Particulas Significativas</div>
-                </div>
-                <p>${filterText}</p>
-            </div>
-            <div class="sp-card">
-                <div class="sp-card-header">
-                    <div class="sp-icon rose">&#128202;</div>
-                    <div class="sp-card-title">Dashboard de Metricas</div>
-                </div>
-                <p>${dashText}</p>
-            </div>
-        </div>
-        <div class="specialist-footer">
-            <div class="sp-footer-icon">&#128218;</div>
-            <div class="sp-footer-text">
-                <strong>Significado cientifico de ${name}:</strong> ${sciText}
-            </div>
-        </div>
-    </div>`;
 }
 
 function renderTable(a) {

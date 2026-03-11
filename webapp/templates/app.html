@@ -12,298 +12,561 @@
 </head>
 <body>
 
-<!-- NAVBAR -->
+<!-- ============================================ -->
+<!-- NAVBAR: 3 TABS                              -->
+<!-- ============================================ -->
 <nav class="navbar">
-    <div class="navbar-brand" onclick="showView('search')">
+    <div class="navbar-brand" onclick="showTab('inicio')">
         <div class="logo">FC</div>
         <div>
             <h1>FlexConsensus</h1>
-            <span>Analisis Interactivo de Proteinas</span>
+            <span>Nature Methods 2025</span>
         </div>
     </div>
+
+    <div class="nav-tabs">
+        <button class="nav-tab active" id="tab-inicio"    onclick="showTab('inicio')">
+            <span class="tab-icon">&#127968;</span> Inicio
+        </button>
+        <button class="nav-tab" id="tab-busqueda"  onclick="showTab('busqueda')">
+            <span class="tab-icon">&#128269;</span> Busqueda
+        </button>
+        <button class="nav-tab" id="tab-resultados" onclick="showTab('resultados')" disabled>
+            <span class="tab-icon">&#128202;</span> Resultados
+        </button>
+    </div>
+
     <div class="nav-status" id="nav-status"></div>
 </nav>
 
 <!-- ============================================ -->
-<!-- VIEW 1: SEARCH                              -->
+<!-- TAB 1: INICIO — Explicacion de algoritmos   -->
 <!-- ============================================ -->
-<div id="view-search" class="view active">
-    <div class="search-hero">
-        <h2>Analiza cualquier proteina</h2>
-        <p>Busca en la base de datos <strong>RCSB Protein Data Bank</strong> (200,000+ estructuras)
-           y ejecuta un analisis FlexConsensus simulado</p>
+<div id="view-inicio" class="view active">
 
-        <div class="search-box">
-            <div class="search-icon">&#128269;</div>
-            <input type="text" id="search-input" placeholder="Buscar proteina... ej: hemoglobin, spike protein, insulin, p53, antibody IgG..."
-                   autocomplete="off">
-            <button id="search-btn" onclick="searchProteins()">Buscar</button>
-        </div>
-
-        <div class="search-suggestions">
-            <span>Prueba con:</span>
-            <button onclick="quickSearch('antibody IgG')">Anticuerpo IgG</button>
-            <button onclick="quickSearch('spike protein SARS-CoV-2')">Spike SARS-CoV-2</button>
-            <button onclick="quickSearch('hemoglobin')">Hemoglobina</button>
-            <button onclick="quickSearch('insulin')">Insulina</button>
-            <button onclick="quickSearch('p53 tumor')">p53 (Tumor)</button>
-            <button onclick="quickSearch('ribosome')">Ribosoma</button>
-            <button onclick="quickSearch('ATP synthase')">ATP Sintasa</button>
-            <button onclick="quickSearch('CRISPR Cas9')">CRISPR-Cas9</button>
-        </div>
+    <!-- Hero -->
+    <div class="inicio-hero">
+        <div class="inicio-badge"><span class="dot"></span>Replicacion del Paper &mdash; Nature Methods 2025</div>
+        <h2>FlexConsensus</h2>
+        <p>Algoritmo de consenso multimodal para analisis de heterogeneidad conformacional en Cryo-EM</p>
+        <p class="inicio-authors">Herreros et al. &mdash; CNB-CSIC Madrid &bull; <strong>Vol. 22, Oct 2025</strong></p>
+        <button class="inicio-cta" onclick="showTab('busqueda')">&#128269; Analizar una Proteina</button>
     </div>
 
-    <!-- Search results -->
-    <div id="search-results" class="search-results"></div>
-
-    <!-- Info section -->
-    <div class="info-section">
-        <h3>Como funciona esta aplicacion?</h3>
-        <div class="info-steps">
-            <div class="info-step">
-                <div class="step-circle">1</div>
-                <h5>Busca una proteina</h5>
-                <p>Elige cualquier proteina de la base de datos <strong>RCSB PDB</strong>
-                   (200,000+ estructuras). Puedes ver su estructura 3D real, rotarla y explorarla.</p>
+    <!-- Resumen 4 pasos -->
+    <div class="inicio-section">
+        <div class="section-title-row">
+            <h3>&#128640; Como funciona en 4 pasos</h3>
+            <p>De la imagen de microscopio a los resultados publicados</p>
+        </div>
+        <div class="pipeline-steps">
+            <div class="pipe-step">
+                <div class="pipe-num">1</div>
+                <div class="pipe-icon">&#128247;</div>
+                <h5>Cryo-EM toma 50,000 fotos</h5>
+                <p>La proteina congelada es fotografiada desde miles de angulos diferentes. Cada imagen 2D captura una pose distinta.</p>
             </div>
-            <div class="info-step">
-                <div class="step-circle">2</div>
-                <h5>Le "tomamos fotos"</h5>
-                <p>Simulamos miles de imagenes 2D de la proteina congelada, como hace
-                   un microscopio Cryo-EM. Cada foto captura la proteina en una <strong>pose diferente</strong>.</p>
+            <div class="pipe-arrow">&#8594;</div>
+            <div class="pipe-step">
+                <div class="pipe-num">2</div>
+                <div class="pipe-icon">&#129504;</div>
+                <h5>Dos IAs analizan por separado</h5>
+                <p>CryoDRGN y HetSIREN organizan las fotos de forma independiente. Cada una produce un "mapa" diferente de las poses.</p>
             </div>
-            <div class="info-step">
-                <div class="step-circle">3</div>
-                <h5>Dos IAs analizan las fotos</h5>
-                <p>CryoDRGN y HetSIREN (dos inteligencias artificiales) analizan las fotos por separado.
-                   Cada una agrupa las fotos segun la pose de la proteina.</p>
+            <div class="pipe-arrow">&#8594;</div>
+            <div class="pipe-step">
+                <div class="pipe-num">3</div>
+                <div class="pipe-icon">&#128279;</div>
+                <h5>FlexConsensus unifica</h5>
+                <p>Un multi-autoencoder alinea los dos mapas. Calcula el "consensus error" de cada foto: cuanto discrepan las IAs.</p>
             </div>
-            <div class="info-step">
-                <div class="step-circle">4</div>
-                <h5>FlexConsensus compara</h5>
-                <p>Compara ambas IAs y muestra: <strong>en que coinciden</strong> (resultado confiable) y
-                   <strong>en que no</strong> (resultado dudoso). Como una segunda opinion medica.</p>
+            <div class="pipe-arrow">&#8594;</div>
+            <div class="pipe-step">
+                <div class="pipe-num">4</div>
+                <div class="pipe-icon">&#9989;</div>
+                <h5>Filtra y valida</h5>
+                <p>Solo las fotos donde ambas IAs coinciden (P20 inferior) se conservan. Resultado: mapa conformacional confiable.</p>
             </div>
         </div>
     </div>
 
-    <!-- References / Links -->
-    <div class="refs-section">
-        <h3>Referencias y Recursos</h3>
-        <p>Paper original, codigo fuente y datos del proyecto FlexConsensus</p>
+    <!-- ======================================= -->
+    <!-- EXPLICACION DE ALGORITMOS               -->
+    <!-- ======================================= -->
+    <div class="inicio-section">
+        <div class="section-title-row">
+            <h3>&#129504; Los tres algoritmos explicados</h3>
+            <p>En cristiano — sin formulas complicadas</p>
+        </div>
+
+        <!-- CryoDRGN -->
+        <div class="algo-card">
+            <div class="algo-card-top cryodrgn-top">
+                <div class="algo-method-badge badge-cryodrgn">IA #1 &mdash; MIT</div>
+                <div class="algo-card-title-row">
+                    <h4>CryoDRGN</h4>
+                    <span class="algo-subtitle">Variational Autoencoder en Espacio de Fourier</span>
+                </div>
+            </div>
+
+            <div class="algo-analogy-box">
+                <span class="analogy-emoji">&#128247;</span>
+                <div>
+                    <strong>Analogia:</strong> Imagina que tienes 50,000 fotos de alguien bailando.
+                    CryoDRGN es como un programa que las organiza automaticamente en un mapa segun la pose,
+                    sin que le digas cuales van juntas. Fotos similares quedan cerca. Ese mapa es el "espacio latente".
+                </div>
+            </div>
+
+            <div class="algo-steps-row">
+                <div class="astep">
+                    <div class="astep-num" style="background:#22c55e">1</div>
+                    <div class="astep-title">Imagen 2D de entrada</div>
+                    <div class="astep-desc">128×128 pixeles, escala de grises. La proteina aparece como manchas borrosas de densidad electronica — no como una foto normal.</div>
+                    <div class="astep-tag tag-in">Entrada</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#6366f1">2</div>
+                    <div class="astep-title">Transformada de Fourier</div>
+                    <div class="astep-desc">Convierte los pixeles a frecuencias. Como pasar de ver una ola de agua a ver sus notas musicales. Hace al algoritmo mas eficiente.</div>
+                    <div class="astep-tag tag-proc">Proceso</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#6366f1">3</div>
+                    <div class="astep-title">VAE Encoder: comprime a 8 numeros</div>
+                    <div class="astep-desc">Una red neuronal recibe la imagen en Fourier y la comprime a solo <strong>8 numeros</strong> (vector z). Esos 8 numeros son las "coordenadas GPS" de la pose.</div>
+                    <div class="astep-tag tag-proc">Red neuronal</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep astep-highlight">
+                    <div class="astep-num" style="background:#f59e0b">4</div>
+                    <div class="astep-title">Espacio Latente 8D</div>
+                    <div class="astep-desc">50,000 vectores forman una "nube" en 8 dimensiones. Las poses similares forman <strong>grupos (clusters)</strong> visibles en los graficos KDE.</div>
+                    <div class="astep-tag tag-latent">&#9733; Espacio Latente</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#06b6d4">5</div>
+                    <div class="astep-title">MLP Decoder: reconstruye 3D</div>
+                    <div class="astep-desc">Otra red neuronal convierte esos 8 numeros en un mapa de densidad 3D de la proteina. El entrenamiento fuerza que 8 numeros similares = poses similares.</div>
+                    <div class="astep-tag tag-out">Salida</div>
+                </div>
+            </div>
+
+            <div class="algo-result-note">
+                <span>&#128200;</span>
+                <div><strong>Lo que ves en el grafico:</strong> Un mapa 2D (proyeccion del espacio 8D) donde cada punto es una imagen. Los colores indican la conformacion asignada.
+                Las zonas amarillas/verdes del fondo KDE son donde mas imagenes se concentran &mdash; las conformaciones mas comunes.
+                <strong>Limitacion:</strong> Trabaja en Fourier, puede producir clusters difusos en proteinas muy flexibles.</div>
+            </div>
+        </div>
+
+        <!-- HetSIREN -->
+        <div class="algo-card">
+            <div class="algo-card-top hetsiren-top">
+                <div class="algo-method-badge badge-hetsiren">IA #2 &mdash; CSIC Madrid</div>
+                <div class="algo-card-title-row">
+                    <h4>HetSIREN</h4>
+                    <span class="algo-subtitle">Redes Sinusoidales Implicitas en Espacio Real</span>
+                </div>
+            </div>
+
+            <div class="algo-analogy-box">
+                <span class="analogy-emoji">&#128204;</span>
+                <div>
+                    <strong>Analogia:</strong> Dos medicos examinan la misma radiografia por separado y la describen con sistemas distintos.
+                    HetSIREN hace el mismo trabajo que CryoDRGN pero con matematica diferente:
+                    en lugar de Fourier, usa funciones seno directamente sobre los pixeles.
+                    El resultado es otro mapa del mismo conjunto de fotos &mdash; diferente organizacion, mismas conformaciones.
+                </div>
+            </div>
+
+            <div class="algo-steps-row">
+                <div class="astep">
+                    <div class="astep-num" style="background:#22c55e">1</div>
+                    <div class="astep-title">Imagen 2D (sin FFT)</div>
+                    <div class="astep-desc">Trabaja directamente con los pixeles en espacio real. Primero corrige la distorsion del microscopio (CTF = funcion de transferencia de contraste).</div>
+                    <div class="astep-tag tag-in">Entrada</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#6366f1">2</div>
+                    <div class="astep-title">Correccion CTF</div>
+                    <div class="astep-desc">El microscopio distorsiona las imagenes. La correccion CTF revierte ese efecto antes de que la IA las analice. Es como quitar el desenfoque de una foto.</div>
+                    <div class="astep-tag tag-proc">Preproceso</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#6366f1">3</div>
+                    <div class="astep-title">SIREN Encoder: activaciones sin(x)</div>
+                    <div class="astep-desc">Una red con funciones <strong>sin(x)</strong> (seno) como activacion. Las funciones sinusoidales representan mejor funciones continuas y periodicas como las ondas de densidad.</div>
+                    <div class="astep-tag tag-proc">Red SIREN</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep astep-highlight">
+                    <div class="astep-num" style="background:#f59e0b">4</div>
+                    <div class="astep-title">Espacio Latente 8D distinto</div>
+                    <div class="astep-desc">Tambien 8 numeros por imagen, pero el espacio tiene topologia diferente. Los mismos grupos existen pero en distintas posiciones y orientaciones. <strong>Es normal y esperado.</strong></div>
+                    <div class="astep-tag tag-latent">&#9733; Espacio Latente</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#06b6d4">5</div>
+                    <div class="astep-title">SIREN Decoder: funcion 3D continua</div>
+                    <div class="astep-desc">En lugar de una rejilla 3D fija, aprende una funcion continua evaluable en cualquier punto. Produce mas detalles finos pero requiere mas memoria.</div>
+                    <div class="astep-tag tag-out">Salida</div>
+                </div>
+            </div>
+
+            <div class="algo-result-note" style="border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.04);">
+                <span>&#128200;</span>
+                <div><strong>Diferencia clave vs CryoDRGN:</strong> El mapa KDE de HetSIREN muestra los mismos clusters pero con diferente orientacion, escala y forma.
+                Si ambos mapas tienen el mismo numero de clusters bien separados &mdash; aunque se vean distintos &mdash; es una buena senal.
+                <strong>El objetivo de FlexConsensus es reconciliar estos dos mapas.</strong></div>
+            </div>
+        </div>
+
+        <!-- FlexConsensus -->
+        <div class="algo-card algo-card-fc">
+            <div class="algo-card-top fc-top">
+                <div class="algo-method-badge badge-fc">FlexConsensus &mdash; CNB-CSIC &bull; Nature Methods 2025</div>
+                <div class="algo-card-title-row">
+                    <h4>FlexConsensus</h4>
+                    <span class="algo-subtitle">Multi-Autoencoder de Consenso</span>
+                </div>
+            </div>
+
+            <div class="algo-analogy-box" style="border-color:rgba(245,158,11,.2);background:rgba(245,158,11,.04);">
+                <span class="analogy-emoji">&#9878;</span>
+                <div>
+                    <strong>Analogia:</strong> Dos medicos examinaron la misma radiografia y llegaron a interpretaciones distintas.
+                    FlexConsensus es el <strong>juez</strong>: les dice "pongan de acuerdo en un lenguaje comun".
+                    Donde ambos coinciden = confiable. Donde discrepan = dudoso.
+                    Como pedir una <strong>segunda opinion medica</strong> y quedarte solo con lo que ambos confirman.
+                </div>
+            </div>
+
+            <!-- FC Layout especial: N encoders + 1 decoder -->
+            <div class="fc-architecture">
+                <div class="fc-arch-col">
+                    <div class="fc-arch-label">Entradas</div>
+                    <div class="fc-input-box" style="border-color:#6366f1">
+                        <div style="color:#818cf8;font-weight:700;font-size:.8rem">CryoDRGN</div>
+                        <div style="font-size:.7rem;color:var(--text2)">50,000 vectores 8D<br>(espacio Fourier)</div>
+                    </div>
+                    <div class="fc-input-box" style="border-color:#22c55e;margin-top:.5rem">
+                        <div style="color:#4ade80;font-weight:700;font-size:.8rem">HetSIREN</div>
+                        <div style="font-size:.7rem;color:var(--text2)">50,000 vectores 8D<br>(espacio real)</div>
+                    </div>
+                </div>
+                <div class="fc-arch-arrow">&#8594;</div>
+                <div class="fc-arch-col">
+                    <div class="fc-arch-label">N Encoders (uno por metodo)</div>
+                    <div class="fc-enc-box">
+                        <div class="fc-enc" style="border-color:#6366f1;background:rgba(99,102,241,.06)">Encoder 1<br><small>CryoDRGN</small></div>
+                        <div class="fc-enc" style="border-color:#22c55e;background:rgba(34,197,94,.06)">Encoder 2<br><small>HetSIREN</small></div>
+                    </div>
+                </div>
+                <div class="fc-arch-arrow">&#8594;</div>
+                <div class="fc-arch-col">
+                    <div class="fc-arch-label">Espacio Comun</div>
+                    <div class="fc-common-box">
+                        <div style="font-size:.75rem;font-weight:700;color:#fbbf24">Espacio<br>Consenso</div>
+                        <div style="font-size:.65rem;color:var(--text2);margin-top:.25rem">Ambos encoders<br>proyectan aqui</div>
+                    </div>
+                </div>
+                <div class="fc-arch-arrow">&#8594;</div>
+                <div class="fc-arch-col">
+                    <div class="fc-arch-label">1 Decoder Compartido</div>
+                    <div class="fc-dec-box">
+                        <div style="font-size:.75rem;font-weight:700;color:#f59e0b">Decoder<br>Compartido</div>
+                        <div style="font-size:.65rem;color:var(--text2);margin-top:.25rem">Reconstruye la imagen<br>desde cualquier encoder</div>
+                    </div>
+                </div>
+                <div class="fc-arch-arrow">&#8594;</div>
+                <div class="fc-arch-col">
+                    <div class="fc-arch-label">Salidas</div>
+                    <div class="fc-out-box" style="border-color:#06b6d4">
+                        <div style="color:#22d3ee;font-weight:700;font-size:.8rem">&#127758; Espacio Consenso</div>
+                        <div style="font-size:.7rem;color:var(--text2)">Mapa unificado 8D<br>con ambos alineados</div>
+                    </div>
+                    <div class="fc-out-box" style="border-color:#ef4444;margin-top:.5rem">
+                        <div style="color:#f87171;font-weight:700;font-size:.8rem">&#128202; Consensus Error</div>
+                        <div style="font-size:.7rem;color:var(--text2)">Un numero por imagen:<br>cuanto discrepan las IAs</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="algo-steps-row">
+                <div class="astep">
+                    <div class="astep-num" style="background:#6366f1">1</div>
+                    <div class="astep-title">Recibe ambos espacios latentes</div>
+                    <div class="astep-desc">Los 50,000 vectores de CryoDRGN Y los 50,000 vectores de HetSIREN. Son las mismas imagenes organizadas de forma diferente.</div>
+                    <div class="astep-tag tag-in">Entrada doble</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#6366f1">2</div>
+                    <div class="astep-title">2 Encoders, 1 Decoder compartido</div>
+                    <div class="astep-desc">El truco: cada encoder proyecta su espacio al espacio comun, pero ambos usan el <strong>mismo decoder</strong>. Esto los <em>fuerza</em> a hablar el mismo idioma.</div>
+                    <div class="astep-tag tag-proc">Arquitectura clave</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep astep-highlight">
+                    <div class="astep-num" style="background:#f59e0b">3</div>
+                    <div class="astep-title">Espacio de Consenso</div>
+                    <div class="astep-desc">Mapa unificado donde ambas IAs estan alineadas. Los clusters visibles corresponden directamente a conformaciones reales de la proteina.</div>
+                    <div class="astep-tag tag-latent">&#9733; Consenso</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#ef4444">4</div>
+                    <div class="astep-title">Consensus Error por imagen</div>
+                    <div class="astep-desc"><strong>Distancia</strong> entre la posicion de la imagen segun el encoder 1 y segun el encoder 2.
+                        <span style="color:#22c55e">Pequena = CONFIABLE.</span>
+                        <span style="color:#ef4444">Grande = DUDOSO.</span></div>
+                    <div class="astep-tag" style="background:rgba(239,68,68,.12);color:#f87171;border-color:rgba(239,68,68,.3)">Error</div>
+                </div>
+                <div class="astep-arrow">&#8594;</div>
+                <div class="astep">
+                    <div class="astep-num" style="background:#06b6d4">5</div>
+                    <div class="astep-title">Filtrado P20: solo lo confiable</div>
+                    <div class="astep-desc">Se conserva el 20% de imagenes con menor error (las mas confiables). Resultado: mapa conformacional limpio y verificado.</div>
+                    <div class="astep-tag tag-out">Resultado</div>
+                </div>
+            </div>
+
+            <div class="fc-metrics-row">
+                <div class="fc-metric">
+                    <div class="fcm-icon" style="color:#6366f1">&#128200;</div>
+                    <div class="fcm-name">Mantel r</div>
+                    <div class="fcm-desc">Mide la concordancia entre los dos espacios latentes. r &gt; 0.7 = excelente. r 0.5-0.7 = aceptable. r &lt; 0.5 = problemas.</div>
+                </div>
+                <div class="fc-metric">
+                    <div class="fcm-icon" style="color:#22c55e">&#128247;</div>
+                    <div class="fcm-name">P20 Threshold</div>
+                    <div class="fcm-desc">El 20% de imagenes con menor consensus error se consideran "confiables" y forman el conjunto final de analisis.</div>
+                </div>
+                <div class="fc-metric">
+                    <div class="fcm-icon" style="color:#f59e0b">&#127758;</div>
+                    <div class="fcm-name">Consensus Space</div>
+                    <div class="fcm-desc">Espacio 8D unificado. En los graficos se proyecta a 2D. Los clusters son las conformaciones de la proteina.</div>
+                </div>
+                <div class="fc-metric">
+                    <div class="fcm-icon" style="color:#ef4444">&#128202;</div>
+                    <div class="fcm-name">Consensus Error</div>
+                    <div class="fcm-desc">Un numero por imagen. En el histograma, el pico izquierdo (verde) = particulas fiables, la cola derecha (roja) = particulas dudosas.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Referencias -->
+    <div class="inicio-section">
+        <div class="section-title-row">
+            <h3>&#128218; Referencias y Recursos</h3>
+            <p>Paper original, codigo y datos del proyecto</p>
+        </div>
         <div class="refs-grid">
             <a href="https://www.nature.com/articles/s41592-025-02841-w" target="_blank" class="ref-card">
                 <div class="ref-icon paper-icon">NM</div>
-                <div class="ref-info">
-                    <div class="ref-title">Paper Original</div>
-                    <div class="ref-desc">Nature Methods, Vol. 22, Oct 2025</div>
-                </div>
+                <div class="ref-info"><div class="ref-title">Paper Original</div><div class="ref-desc">Nature Methods, Vol. 22, Oct 2025</div></div>
                 <span class="ref-arrow">&#8599;</span>
             </a>
             <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12510870/" target="_blank" class="ref-card">
                 <div class="ref-icon pmc-icon">PMC</div>
-                <div class="ref-info">
-                    <div class="ref-title">Paper Gratis (PubMed Central)</div>
-                    <div class="ref-desc">Acceso completo sin paywall</div>
-                </div>
+                <div class="ref-info"><div class="ref-title">Paper Gratis (PubMed Central)</div><div class="ref-desc">Acceso completo sin paywall</div></div>
                 <span class="ref-arrow">&#8599;</span>
             </a>
             <a href="https://www.csic.es/es/actualidad-del-csic/un-nuevo-algoritmo-permite-identificar-con-mayor-precision-la-flexibilidad-en-la-estructura-3d-de-las-proteinas" target="_blank" class="ref-card">
                 <div class="ref-icon csic-icon">ES</div>
-                <div class="ref-info">
-                    <div class="ref-title">Noticia CSIC (Espanol)</div>
-                    <div class="ref-desc">Resumen del proyecto en espanol</div>
-                </div>
-                <span class="ref-arrow">&#8599;</span>
-            </a>
-            <a href="https://github.com/scipion-em/scipion-em-flexutils" target="_blank" class="ref-card">
-                <div class="ref-icon gh-icon">GH</div>
-                <div class="ref-info">
-                    <div class="ref-title">Codigo: Scipion Plugin</div>
-                    <div class="ref-desc">scipion-em-flexutils (GitHub)</div>
-                </div>
+                <div class="ref-info"><div class="ref-title">Noticia CSIC</div><div class="ref-desc">Resumen en espanol</div></div>
                 <span class="ref-arrow">&#8599;</span>
             </a>
             <a href="https://github.com/I2PC/Flexutils-Toolkit" target="_blank" class="ref-card">
                 <div class="ref-icon gh-icon">GH</div>
-                <div class="ref-info">
-                    <div class="ref-title">Codigo: Flexutils Toolkit</div>
-                    <div class="ref-desc">Redes neuronales (CryoDRGN, HetSIREN, FlexConsensus)</div>
-                </div>
+                <div class="ref-info"><div class="ref-title">Codigo: Flexutils Toolkit</div><div class="ref-desc">CryoDRGN, HetSIREN, FlexConsensus</div></div>
                 <span class="ref-arrow">&#8599;</span>
             </a>
-            <a href="https://scipion.i2pc.es/" target="_blank" class="ref-card">
-                <div class="ref-icon sci-icon">Sc</div>
-                <div class="ref-info">
-                    <div class="ref-title">Plataforma Scipion</div>
-                    <div class="ref-desc">Framework open-source para Cryo-EM</div>
-                </div>
+            <a href="https://github.com/scipion-em/scipion-em-flexutils" target="_blank" class="ref-card">
+                <div class="ref-icon gh-icon">GH</div>
+                <div class="ref-info"><div class="ref-title">Scipion Plugin</div><div class="ref-desc">scipion-em-flexutils (GitHub)</div></div>
                 <span class="ref-arrow">&#8599;</span>
             </a>
             <a href="https://www.ebi.ac.uk/empiar/" target="_blank" class="ref-card">
                 <div class="ref-icon data-icon">EM</div>
-                <div class="ref-info">
-                    <div class="ref-title">Datos EMPIAR</div>
-                    <div class="ref-desc">Archivo publico de imagenes Cryo-EM</div>
-                </div>
+                <div class="ref-info"><div class="ref-title">Datos EMPIAR</div><div class="ref-desc">Archivo publico de imagenes Cryo-EM</div></div>
                 <span class="ref-arrow">&#8599;</span>
             </a>
         </div>
     </div>
+
 </div>
 
 <!-- ============================================ -->
-<!-- VIEW 2: PROTEIN DETAIL + CONFIG             -->
+<!-- TAB 2: BUSQUEDA — Search + Protein + Config -->
 <!-- ============================================ -->
-<div id="view-protein" class="view">
-    <button class="back-btn" onclick="showView('search')">&#8592; Volver a buscar</button>
+<div id="view-busqueda" class="view">
 
-    <div class="protein-detail" id="protein-detail">
-        <div class="protein-main">
-            <div class="protein-viewer-box">
-                <div class="viewer-tabs">
-                    <button class="vt-tab active" onclick="switchProteinView('3d', this)">Estructura 3D</button>
-                    <button class="vt-tab" onclick="switchProteinView('image', this)">Imagen Estatica</button>
-                </div>
-                <div id="protein-viewer-3d" class="protein-3d-container"></div>
-                <div id="protein-viewer-img" class="protein-img-container" style="display:none;">
-                    <img id="protein-img" src="" alt="Estructura 3D">
-                </div>
-                <div class="viewer-controls">
-                    <button onclick="viewer3dStyle('cartoon')" title="Cintas (forma general)">Cintas</button>
-                    <button onclick="viewer3dStyle('stick')" title="Atomos y enlaces">Atomos</button>
-                    <button onclick="viewer3dStyle('sphere')" title="Esferas (superficie)">Esferas</button>
-                    <button onclick="viewer3dStyle('line')" title="Esqueleto">Esqueleto</button>
-                    <button onclick="viewer3dSpin()" title="Rotar automaticamente">Rotar</button>
-                </div>
-                <div class="viewer-hint">Arrastra para rotar &bull; Scroll para zoom &bull; Click derecho para mover</div>
+    <!-- SUB: Search -->
+    <div id="view-search" class="sub-view active">
+        <div class="search-hero">
+            <h2>Analiza cualquier proteina</h2>
+            <p>Busca en <strong>RCSB Protein Data Bank</strong> (200,000+ estructuras) y ejecuta FlexConsensus</p>
+            <div class="search-box">
+                <div class="search-icon">&#128269;</div>
+                <input type="text" id="search-input" placeholder="ej: hemoglobin, spike protein, insulin, p53, antibody IgG..." autocomplete="off">
+                <button id="search-btn" onclick="searchProteins()">Buscar</button>
             </div>
-            <div class="protein-info">
-                <div class="protein-pdb-id" id="protein-pdb-id"></div>
-                <h2 id="protein-title"></h2>
-                <p id="protein-molecule" class="protein-molecule"></p>
-                <div class="protein-tags" id="protein-tags"></div>
-                <div class="protein-stats" id="protein-stats"></div>
-                <div class="protein-links" id="protein-links"></div>
+            <div class="search-suggestions">
+                <span>Prueba con:</span>
+                <button onclick="quickSearch('antibody IgG')">Anticuerpo IgG</button>
+                <button onclick="quickSearch('spike protein SARS-CoV-2')">Spike SARS-CoV-2</button>
+                <button onclick="quickSearch('hemoglobin')">Hemoglobina</button>
+                <button onclick="quickSearch('insulin')">Insulina</button>
+                <button onclick="quickSearch('p53 tumor')">p53 (Tumor)</button>
+                <button onclick="quickSearch('ribosome')">Ribosoma</button>
+                <button onclick="quickSearch('ATP synthase')">ATP Sintasa</button>
+                <button onclick="quickSearch('CRISPR Cas9')">CRISPR-Cas9</button>
             </div>
         </div>
+        <div id="search-results" class="search-results"></div>
+    </div>
 
-        <!-- Analysis config -->
-        <div class="analysis-config">
-            <h3>Configurar Analisis FlexConsensus</h3>
-            <p>Ajusta los parametros y ejecuta el analisis sobre esta proteina</p>
-
-            <div class="config-grid">
-                <div class="config-item">
-                    <label>Particulas a simular</label>
-                    <select id="cfg-particles">
-                        <option value="10000">10,000 (rapido)</option>
-                        <option value="30000" selected>30,000 (normal)</option>
-                        <option value="50000">50,000 (paper)</option>
-                    </select>
-                    <span class="config-hint">Imagenes 2D simuladas de Cryo-EM</span>
+    <!-- SUB: Protein detail + Config -->
+    <div id="view-protein" class="sub-view">
+        <button class="back-btn" onclick="showSubView('search')">&#8592; Volver a buscar</button>
+        <div class="protein-detail" id="protein-detail">
+            <div class="protein-main">
+                <div class="protein-viewer-box">
+                    <div class="viewer-tabs">
+                        <button class="vt-tab active" onclick="switchProteinView('3d', this)">Estructura 3D</button>
+                        <button class="vt-tab" onclick="switchProteinView('image', this)">Imagen Estatica</button>
+                    </div>
+                    <div id="protein-viewer-3d" class="protein-3d-container"></div>
+                    <div id="protein-viewer-img" class="protein-img-container" style="display:none;">
+                        <img id="protein-img" src="" alt="Estructura 3D">
+                    </div>
+                    <div class="viewer-controls">
+                        <button onclick="viewer3dStyle('cartoon')" title="Cintas">Cintas</button>
+                        <button onclick="viewer3dStyle('stick')" title="Atomos">Atomos</button>
+                        <button onclick="viewer3dStyle('sphere')" title="Esferas">Esferas</button>
+                        <button onclick="viewer3dStyle('line')" title="Esqueleto">Esqueleto</button>
+                        <button onclick="viewer3dSpin()" title="Rotar">Rotar</button>
+                    </div>
+                    <div class="viewer-hint">Arrastra para rotar &bull; Scroll para zoom</div>
                 </div>
-                <div class="config-item">
-                    <label>Metodos de IA</label>
-                    <select id="cfg-methods">
-                        <option value="2" selected>2 (CryoDRGN + HetSIREN)</option>
-                        <option value="3">3 (+ cryoSPARC 3DVA)</option>
-                    </select>
-                    <span class="config-hint">Mas metodos = consenso mas robusto</span>
-                </div>
-                <div class="config-item">
-                    <label>Dimension latente</label>
-                    <select id="cfg-latent">
-                        <option value="4">4 dimensiones</option>
-                        <option value="8" selected>8 dimensiones (paper)</option>
-                        <option value="16">16 dimensiones</option>
-                    </select>
-                    <span class="config-hint">Complejidad del espacio de conformaciones</span>
+                <div class="protein-info">
+                    <div class="protein-pdb-id" id="protein-pdb-id"></div>
+                    <h2 id="protein-title"></h2>
+                    <p id="protein-molecule" class="protein-molecule"></p>
+                    <div class="protein-tags" id="protein-tags"></div>
+                    <div class="protein-stats" id="protein-stats"></div>
+                    <div class="protein-links" id="protein-links"></div>
                 </div>
             </div>
-
-            <!-- Leyenda explicativa de cada parametro -->
-            <div class="config-legend">
-                <div class="config-legend-title">Que significa cada parametro?</div>
-                <div class="config-legend-items">
-                    <div class="config-legend-item">
-                        <div class="cli-header">Particulas a simular</div>
-                        <div class="cli-body">
-                            Es la cantidad de <strong>"fotos" 2D</strong> que el microscopio Cryo-EM toma de la proteina congelada.
-                            Cada foto captura la proteina en una pose aleatoria.
-                            <div class="cli-options">
-                                <span><strong>10,000</strong> &rarr; Analisis rapido, menos detalle. Util para una vista previa.</span>
-                                <span><strong>30,000</strong> &rarr; Balance entre velocidad y detalle. Recomendado.</span>
-                                <span><strong>50,000</strong> &rarr; Cantidad usada en el paper original. Maximo detalle pero mas lento.</span>
+            <div class="analysis-config">
+                <h3>Configurar Analisis FlexConsensus</h3>
+                <p>Ajusta los parametros y ejecuta el analisis sobre esta proteina</p>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label>Particulas a simular</label>
+                        <select id="cfg-particles">
+                            <option value="10000">10,000 (rapido)</option>
+                            <option value="30000" selected>30,000 (normal)</option>
+                            <option value="50000">50,000 (paper)</option>
+                        </select>
+                        <span class="config-hint">Imagenes 2D simuladas de Cryo-EM</span>
+                    </div>
+                    <div class="config-item">
+                        <label>Metodos de IA</label>
+                        <select id="cfg-methods">
+                            <option value="2" selected>2 (CryoDRGN + HetSIREN)</option>
+                            <option value="3">3 (+ cryoSPARC 3DVA)</option>
+                        </select>
+                        <span class="config-hint">Mas metodos = consenso mas robusto</span>
+                    </div>
+                    <div class="config-item">
+                        <label>Dimension latente</label>
+                        <select id="cfg-latent">
+                            <option value="4">4 dimensiones</option>
+                            <option value="8" selected>8 dimensiones (paper)</option>
+                            <option value="16">16 dimensiones</option>
+                        </select>
+                        <span class="config-hint">Complejidad del espacio de conformaciones</span>
+                    </div>
+                </div>
+                <div class="config-legend">
+                    <div class="config-legend-title">Que significa cada parametro?</div>
+                    <div class="config-legend-items">
+                        <div class="config-legend-item">
+                            <div class="cli-header">Particulas a simular</div>
+                            <div class="cli-body">Cantidad de "fotos" 2D que el microscopio toma de la proteina congelada.
+                                <div class="cli-options">
+                                    <span><strong>10,000</strong> &rarr; Rapido, menos detalle.</span>
+                                    <span><strong>30,000</strong> &rarr; Balance recomendado.</span>
+                                    <span><strong>50,000</strong> &rarr; Exactamente como el paper original.</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="config-legend-item">
-                        <div class="cli-header">Metodos de IA</div>
-                        <div class="cli-body">
-                            Cuantas inteligencias artificiales <strong>analizan las fotos por separado</strong>.
-                            FlexConsensus compara sus resultados para ver en que coinciden (confiable) y en que no (dudoso).
-                            <div class="cli-options">
-                                <span><strong>2 metodos</strong> &rarr; CryoDRGN (VAE en Fourier) + HetSIREN (SIREN en espacio real). Es el minimo para comparar.</span>
-                                <span><strong>3 metodos</strong> &rarr; Agrega cryoSPARC 3DVA. Mas opiniones = consenso mas robusto, pero mas lento.</span>
+                        <div class="config-legend-item">
+                            <div class="cli-header">Metodos de IA</div>
+                            <div class="cli-body">Cuantas IAs analizan las fotos por separado.
+                                <div class="cli-options">
+                                    <span><strong>2 metodos</strong> &rarr; CryoDRGN + HetSIREN. Minimo para comparar.</span>
+                                    <span><strong>3 metodos</strong> &rarr; Agrega cryoSPARC 3DVA. Mas robusto.</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="config-legend-item">
-                        <div class="cli-header">Dimension latente</div>
-                        <div class="cli-body">
-                            El <strong>"vocabulario"</strong> que usa la IA para describir las poses de la proteina.
-                            Imagina que describes una mano: con 4 palabras dices "abierta/cerrada/arriba/abajo", con 16 palabras puedes describir cada dedo.
-                            <div class="cli-options">
-                                <span><strong>4 dim.</strong> &rarr; Descripcion simple. Captura solo los movimientos grandes (ej: proteina abierta vs cerrada).</span>
-                                <span><strong>8 dim.</strong> &rarr; Usado en el paper. Buen balance entre detalle y estabilidad.</span>
-                                <span><strong>16 dim.</strong> &rarr; Descripcion muy detallada. Captura movimientos sutiles, pero puede ser ruidoso.</span>
+                        <div class="config-legend-item">
+                            <div class="cli-header">Dimension latente</div>
+                            <div class="cli-body">El "vocabulario" de la IA para describir las poses.
+                                <div class="cli-options">
+                                    <span><strong>4 dim.</strong> &rarr; Movimientos grandes.</span>
+                                    <span><strong>8 dim.</strong> &rarr; Paper original. Balance optimo.</span>
+                                    <span><strong>16 dim.</strong> &rarr; Mas detalles, mas ruidoso.</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">
+                    <span class="analyze-icon">&#9654;</span>
+                    Ejecutar Analisis FlexConsensus
+                </button>
             </div>
-
-            <button class="analyze-btn" id="analyze-btn" onclick="runAnalysis()">
-                <span class="analyze-icon">&#9654;</span>
-                Ejecutar Analisis FlexConsensus
-            </button>
         </div>
     </div>
-</div>
 
-<!-- ============================================ -->
-<!-- VIEW 3: ANALYSIS RUNNING                    -->
-<!-- ============================================ -->
-<div id="view-loading" class="view">
-    <div class="loading-screen">
-        <div class="loading-spinner-big"></div>
-        <h2>Ejecutando FlexConsensus...</h2>
-        <div class="loading-steps" id="loading-steps"></div>
+    <!-- SUB: Loading -->
+    <div id="view-loading" class="sub-view">
+        <div class="loading-screen">
+            <div class="loading-spinner-big"></div>
+            <h2>Ejecutando FlexConsensus...</h2>
+            <div class="loading-steps" id="loading-steps"></div>
+        </div>
     </div>
+
 </div>
 
 <!-- ============================================ -->
-<!-- VIEW 4: RESULTS                             -->
+<!-- TAB 3: RESULTADOS                           -->
 <!-- ============================================ -->
 <div id="view-results" class="view">
     <div class="results-header">
-        <button class="back-btn" onclick="showView('protein')"><span>&#8592;</span> Volver a la proteina</button>
-        <button class="new-btn" onclick="showView('search')"><span>+</span> Nueva busqueda</button>
+        <button class="back-btn" onclick="showSubView('protein'); showTab('busqueda')"><span>&#8592;</span> Volver a la proteina</button>
+        <button class="new-btn" onclick="showSubView('search'); showTab('busqueda')"><span>+</span> Nueva busqueda</button>
     </div>
 
-    <!-- Results summary -->
     <div class="results-summary" id="results-summary"></div>
 
-    <!-- PASO 1: Que proteina estamos analizando -->
+    <!-- PASO 1: La proteina -->
     <div class="results-section">
         <div class="rs-step-badge">PASO 1 &mdash; LA PROTEINA</div>
-        <div class="rs-header">
-            <h3>Que proteina estamos analizando?</h3>
-        </div>
+        <div class="rs-header"><h3>Que proteina estamos analizando?</h3></div>
         <div class="rs-explanation" id="explain-protein"></div>
-
-        <!-- 3D Protein Viewer in Results -->
         <div class="results-protein-viewer">
             <div class="rpv-viewer-col">
                 <div class="rpv-label">Estructura 3D real de la proteina</div>
@@ -325,117 +588,104 @@
     <!-- Protein Structure Levels -->
     <div class="results-section">
         <div class="rs-step-badge">ESTRUCTURA MOLECULAR</div>
-        <div class="rs-header">
-            <h3>Niveles de Estructura de la Proteina</h3>
-        </div>
+        <div class="rs-header"><h3>Niveles de Estructura de la Proteina</h3></div>
         <div class="rs-explanation" id="explain-structure"></div>
         <div class="struct-section">
-            <div class="struct-section-label">&#128300; Organizacion Estructural de la Proteina</div>
+            <div class="struct-section-label">&#128300; Organizacion Estructural &mdash; datos reales de RCSB PDB</div>
             <div class="struct-grid" id="struct-grid"></div>
         </div>
     </div>
 
-    <!-- Cryo-EM Gallery: simulated projection images -->
+    <!-- Cryo-EM Gallery -->
     <div class="results-section" id="section-cryoem-gallery">
         <div class="rs-step-badge">LAS "FOTOS" CRYO-EM</div>
-        <div class="rs-header">
-            <h3>Asi se ven las imagenes que analizan las IAs</h3>
-        </div>
+        <div class="rs-header"><h3>Asi se ven las imagenes que analizan las IAs</h3></div>
         <div class="rs-explanation" id="explain-cryoem"></div>
         <div class="cryoem-grid" id="cryoem-grid"></div>
         <div class="cryoem-caption" id="cryoem-caption"></div>
     </div>
 
-    <!-- Flow connector -->
     <div class="flow-connector"><div class="fc-line"></div><div class="fc-label" id="fc-label-1"></div><div class="fc-arrow">&#x25BC;</div></div>
 
-    <!-- PASO 2: Dos IAs analizan la proteina -->
+    <!-- PASO 2: Dos IAs -->
     <div class="results-section">
         <div class="rs-step-badge">PASO 2 &mdash; DOS IAs INDEPENDIENTES</div>
-        <div class="rs-header">
-            <h3>Cada IA genera su propio "mapa" de las conformaciones</h3>
-        </div>
+        <div class="rs-header"><h3>Cada IA genera su propio "mapa" de las conformaciones</h3></div>
         <div class="rs-explanation" id="explain-methods"></div>
-        <!-- Chart guide -->
         <div class="chart-guide" id="guide-methods"></div>
         <div class="chart-row">
             <div class="chart-box">
-                <div class="chart-label">CryoDRGN <span>Metodo 1 - VAE en Fourier</span></div>
+                <div class="chart-label">CryoDRGN <span>Metodo 1 &mdash; VAE en Fourier</span></div>
                 <div id="chart-m1" class="chart-area"></div>
             </div>
             <div class="chart-box">
-                <div class="chart-label">HetSIREN <span>Metodo 2 - SIREN en espacio real</span></div>
+                <div class="chart-label">HetSIREN <span>Metodo 2 &mdash; SIREN en espacio real</span></div>
                 <div id="chart-m2" class="chart-area"></div>
             </div>
         </div>
         <div class="rs-insight" id="insight-methods"></div>
+        <!-- Interpretacion inline -->
+        <div id="sp-methods" class="sp-inline"></div>
     </div>
 
-    <!-- Flow connector -->
     <div class="flow-connector"><div class="fc-line"></div><div class="fc-label" id="fc-label-2"></div><div class="fc-arrow">&#x25BC;</div></div>
 
-    <!-- PASO 3: FlexConsensus unifica -->
+    <!-- PASO 3: FlexConsensus -->
     <div class="results-section">
         <div class="rs-step-badge">PASO 3 &mdash; FLEXCONSENSUS UNIFICA</div>
-        <div class="rs-header">
-            <h3>FlexConsensus alinea ambos mapas en uno solo</h3>
-        </div>
+        <div class="rs-header"><h3>FlexConsensus alinea ambos mapas en uno solo</h3></div>
         <div class="rs-explanation" id="explain-consensus"></div>
-        <!-- Visual comparison: M1 + M2 = Consensus -->
         <div class="comparison-visual" id="comparison-visual"></div>
         <div class="consensus-tabs">
             <button class="c-tab active" onclick="renderConsensus('labels', this)">Por Conformacion</button>
             <button class="c-tab" onclick="renderConsensus('errors', this)">Por Error</button>
             <button class="c-tab" onclick="renderConsensus('subspace', this)">Subespacio (Paper)</button>
         </div>
-        <!-- Chart guide -->
         <div class="chart-guide" id="guide-consensus"></div>
         <div id="chart-consensus" class="chart-area-big"></div>
         <div class="rs-insight" id="insight-consensus"></div>
+        <!-- Interpretacion inline -->
+        <div id="sp-consensus" class="sp-inline"></div>
     </div>
 
-    <!-- Flow connector -->
     <div class="flow-connector"><div class="fc-line"></div><div class="fc-label" id="fc-label-3"></div><div class="fc-arrow">&#x25BC;</div></div>
 
-    <!-- PASO 4: Medir fiabilidad -->
+    <!-- PASO 4: Fiabilidad -->
     <div class="results-section">
         <div class="rs-step-badge">PASO 4 &mdash; MEDIR FIABILIDAD</div>
-        <div class="rs-header">
-            <h3>Que tan confiables son los resultados?</h3>
-        </div>
+        <div class="rs-header"><h3>Que tan confiables son los resultados?</h3></div>
         <div class="rs-explanation" id="explain-error"></div>
-        <!-- Chart guide -->
         <div class="chart-guide" id="guide-error"></div>
         <div class="chart-row">
             <div class="chart-box">
                 <div class="chart-label">Distribucion de Consensus Error <span>Verde = fiable, Rojo = no fiable</span></div>
                 <div id="chart-histogram" class="chart-area"></div>
                 <div class="chart-legend-strip">
-                    <span class="cleg-item"><span class="cleg-dot" style="background:#22c55e"></span>Fiable (P20 inferior)</span>
-                    <span class="cleg-item"><span class="cleg-dot" style="background:#6366f1"></span>Intermedio (P20–P80)</span>
-                    <span class="cleg-item"><span class="cleg-dot" style="background:#ef4444"></span>Dudoso (P80 superior)</span>
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#22c55e"></span>Fiable (P20)</span>
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#6366f1"></span>Intermedio</span>
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#ef4444"></span>Dudoso (P80)</span>
                     <span class="cleg-item"><span class="cleg-dash" style="border-color:#22c55e"></span>Umbral P20</span>
                     <span class="cleg-item"><span class="cleg-dash" style="border-color:#ef4444"></span>Umbral P80</span>
                 </div>
             </div>
             <div class="chart-box">
-                <div class="chart-label">Filtrado: Todas vs Solo Fiables <span>Gris = todas, Color = fiables (P20)</span></div>
+                <div class="chart-label">Filtrado: Todas vs Solo Fiables <span>Gris = todas, Color = fiables</span></div>
                 <div id="chart-filter" class="chart-area"></div>
                 <div class="chart-legend-strip" id="legend-filter">
-                    <span class="cleg-item"><span class="cleg-dot" style="background:#2e4050"></span>Todas las particulas (KDE densidad)</span>
-                    <span class="cleg-item" id="legend-filter-confs"></span>
+                    <span class="cleg-item"><span class="cleg-dot" style="background:#2e4050"></span>Todas (KDE)</span>
+                    <span id="legend-filter-confs"></span>
                 </div>
             </div>
         </div>
         <div class="rs-insight" id="insight-error"></div>
+        <!-- Interpretacion inline -->
+        <div id="sp-errors" class="sp-inline"></div>
     </div>
 
-    <!-- DASHBOARD: Metricas visuales -->
+    <!-- DASHBOARD -->
     <div class="results-section">
         <div class="rs-step-badge">DASHBOARD DE ANALISIS</div>
-        <div class="rs-header">
-            <h3>Resumen Visual de Metricas Clave</h3>
-        </div>
+        <div class="rs-header"><h3>Resumen Visual de Metricas Clave</h3></div>
         <div class="dashboard-wrap" id="dashboard-wrap">
             <div class="dashboard-kpi" id="dashboard-kpi"></div>
             <div class="dashboard-charts">
@@ -448,41 +698,30 @@
                     <div class="dash-plot-area" id="dash-reliability"></div>
                 </div>
                 <div class="dash-plot-box">
-                    <div class="dash-plot-label">Score de Consenso (Indicador)</div>
+                    <div class="dash-plot-label">Score de Consenso</div>
                     <div class="dash-plot-area" id="dash-gauge"></div>
                 </div>
             </div>
         </div>
+        <!-- Interpretacion inline -->
+        <div id="sp-dashboard" class="sp-inline"></div>
     </div>
 
-    <!-- PASO 5: Tabla detallada -->
+    <!-- PASO 5: Tabla -->
     <div class="results-section">
         <div class="rs-step-badge">PASO 5 &mdash; DETALLE POR CONFORMACION</div>
-        <div class="rs-header">
-            <h3>Que tan fiable es cada conformacion?</h3>
-        </div>
+        <div class="rs-header"><h3>Que tan fiable es cada conformacion?</h3></div>
         <div class="rs-explanation" id="explain-table"></div>
         <div class="table-container" id="results-table"></div>
     </div>
 
-    <!-- CONCLUSIONES FINALES -->
+    <!-- CONCLUSIONES -->
     <div class="results-section">
         <div class="rs-step-badge conclusion-badge">CONCLUSIONES DEL ANALISIS</div>
-        <div class="rs-header">
-            <h3>Que concluimos sobre esta proteina?</h3>
-        </div>
+        <div class="rs-header"><h3>Que concluimos sobre esta proteina?</h3></div>
         <div class="conclusions-box" id="conclusions-box"></div>
     </div>
 
-    <!-- ESPECIALISTA IA: Interpretacion Experta -->
-    <div class="results-section">
-        <div class="rs-step-badge specialist-badge">INTERPRETACION DEL ESPECIALISTA</div>
-        <div class="rs-header">
-            <h3>Que nos dicen estos graficos? &mdash; Analisis Experto</h3>
-            <p class="rs-subtitle">Interpretacion automatizada basada en los resultados del analisis FlexConsensus</p>
-        </div>
-        <div id="specialist-panel"></div>
-    </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
