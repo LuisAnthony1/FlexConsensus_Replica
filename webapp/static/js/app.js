@@ -83,21 +83,24 @@ function showCodeTab(name, btn) {
 // =============================================
 // PAPER EXPERIMENT (Correr Investigacion)
 // =============================================
-function runPaperExperiment() {
-    // Switch to busqueda tab, search for IgG, auto-set paper params
+async function runPaperExperiment() {
+    // Go directly to 1IGY with paper parameters — no manual selection needed
     showTab('busqueda');
-    showSubView('search');
-    const inp = document.getElementById('search-input');
-    if (inp) inp.value = 'antibody IgG';
-    searchProteins().then(() => {
-        // After search, set paper params
-        setTimeout(() => {
-            const cfgP = document.getElementById('cfg-particles');
-            const cfgL = document.getElementById('cfg-latent');
-            if (cfgP) cfgP.value = '50000';
-            if (cfgL) cfgL.value = '8';
-        }, 800);
-    });
+    const btn = document.querySelector('.replicate-cta');
+    if (btn) { btn.style.opacity = '0.6'; btn.style.pointerEvents = 'none'; }
+
+    // Directly load 1IGY (full IgG2a — closest to IgG-RL CryoBench dataset)
+    await selectProtein('1IGY');
+
+    // Auto-set paper parameters
+    const cfgP = document.getElementById('cfg-particles');
+    const cfgL = document.getElementById('cfg-latent');
+    const cfgM = document.getElementById('cfg-methods');
+    if (cfgP) cfgP.value = '50000';
+    if (cfgL) cfgL.value = '8';
+    if (cfgM) cfgM.value = '2';
+
+    if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
 }
 
 // =============================================
