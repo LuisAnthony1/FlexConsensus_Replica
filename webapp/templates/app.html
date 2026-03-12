@@ -363,6 +363,132 @@
         </div>
     </div>
 
+    <!-- Codigo del algoritmo para niños -->
+    <div class="inicio-section">
+        <div class="section-title-row">
+            <h3>&#128187; El codigo, explicado para ninos</h3>
+            <p>Pseudocodigo simplificado &mdash; lo que hace cada IA en ~10 lineas</p>
+        </div>
+
+        <div class="code-tabs">
+            <button class="code-tab active" onclick="showCodeTab('cryodrgn', this)">CryoDRGN</button>
+            <button class="code-tab" onclick="showCodeTab('hetsiren', this)">HetSIREN</button>
+            <button class="code-tab" onclick="showCodeTab('flexconsensus', this)">FlexConsensus</button>
+        </div>
+
+        <div id="code-cryodrgn" class="code-panel active">
+            <div class="code-header">
+                <span class="code-badge badge-cryodrgn">CryoDRGN &mdash; MIT</span>
+                <span class="code-title">Variational Autoencoder en Espacio de Fourier</span>
+            </div>
+            <pre class="code-block"><span class="cc"># CryoDRGN: "Organiza las fotos por similitud de pose"</span>
+<span class="cc"># Entrada: 50,000 imagenes 2D (128x128 pixeles, muy ruidosas)</span>
+
+<span class="ck">para</span> cada imagen <span class="ck">en</span> 50_000_fotos:
+
+    <span class="cc">    # Paso 1: Convierte pixeles a frecuencias (como notas musicales)</span>
+    frecuencias = transformada_de_Fourier(imagen)
+
+    <span class="cc">    # Paso 2: La IA comprime toda esa informacion a solo 8 numeros</span>
+    z = encoder_VAE(frecuencias)   <span class="cc"># z = [0.3, -1.2, 0.8, 2.1, -0.5, 1.4, -0.9, 0.6]</span>
+
+    <span class="cc">    # Paso 3: Guarda las "coordenadas GPS" de esa pose</span>
+    espacio_latente.guardar(z)
+
+<span class="cc"># Ahora tenemos 50,000 puntos en un espacio de 8 dimensiones</span>
+<span class="cc"># Fotos similares quedaron CERCA en ese espacio → se forman "grupos"</span>
+mapa_2D = proyectar_a_2D(espacio_latente)   <span class="cc"># lo que ves en el grafico KDE</span></pre>
+            <div class="code-note">
+                <strong>&#128161; En cristiano:</strong> Es como si tuvieras 50,000 fotos de una persona bailando y una IA las organiza automaticamente en un album, poniendo juntas las fotos de poses similares. Los "8 numeros" son como las coordenadas GPS de cada pose.
+            </div>
+        </div>
+
+        <div id="code-hetsiren" class="code-panel">
+            <div class="code-header">
+                <span class="code-badge badge-hetsiren">HetSIREN &mdash; CSIC Madrid</span>
+                <span class="code-title">Redes Sinusoidales en Espacio Real</span>
+            </div>
+            <pre class="code-block"><span class="cc"># HetSIREN: "Lo mismo pero con matematica diferente"</span>
+<span class="cc"># Diferencia clave: NO usa Fourier, trabaja directo con pixeles</span>
+<span class="cc"># y usa sin(x) como funcion de activacion (en vez de ReLU)</span>
+
+<span class="ck">para</span> cada imagen <span class="ck">en</span> 50_000_fotos:
+
+    <span class="cc">    # Paso 1: Corrige la distorsion del microscopio (efecto de lupa)</span>
+    imagen_limpia = corregir_CTF(imagen)
+
+    <span class="cc">    # Paso 2: Comprime directo a 8 numeros (sin Fourier)</span>
+    <span class="cc">    # Usa sin(x) en vez de max(0,x) → mejor para funciones continuas</span>
+    z = encoder_SIREN(imagen_limpia)   <span class="cc"># SIREN = Sinusoidal Representation Network</span>
+
+    <span class="cc">    # Paso 3: Guarda en su propio espacio latente</span>
+    espacio_latente_2.guardar(z)
+
+<span class="cc"># El resultado es OTRO mapa de las mismas 50,000 fotos</span>
+<span class="cc"># Los mismos grupos existen, pero en diferente posicion y orientacion</span>
+<span class="cc"># (Como dos GPS que usan sistemas de coordenadas distintos)</span></pre>
+            <div class="code-note">
+                <strong>&#128161; En cristiano:</strong> El segundo medico examina la misma radiografia. Llega a las mismas conclusiones pero las anota en su propio idioma. El mapa se ve diferente, pero describe las mismas poses.
+            </div>
+        </div>
+
+        <div id="code-flexconsensus" class="code-panel">
+            <div class="code-header">
+                <span class="code-badge badge-fc">FlexConsensus &mdash; Nature Methods 2025</span>
+                <span class="code-title">Multi-Autoencoder de Consenso</span>
+            </div>
+            <pre class="code-block"><span class="cc"># FlexConsensus: "Hace que los 2 mapas hablen el mismo idioma"</span>
+<span class="cc"># Arquitectura clave: N encoders → ESPACIO COMUN ← 1 decoder compartido</span>
+
+<span class="cc"># Entrenamiento: fuerza a ambas IAs a usar el mismo decoder</span>
+<span class="ck">para</span> cada imagen <span class="ck">en</span> 50_000_fotos:
+
+    z1 = encoder_CryoDRGN(imagen)       <span class="cc"># posicion segun IA 1</span>
+    z2 = encoder_HetSIREN(imagen)       <span class="cc"># posicion segun IA 2</span>
+
+    <span class="cc">    # El MISMO decoder reconstruye desde ambos encoders</span>
+    reconstruccion_1 = decoder_compartido(z1)   <span class="cc"># ← TRUCO CLAVE</span>
+    reconstruccion_2 = decoder_compartido(z2)   <span class="cc"># ← Esto los ALINEA</span>
+
+    <span class="cc">    # Consensus Error = distancia entre las dos posiciones</span>
+    error[imagen] = distancia(z1, z2)
+
+<span class="cc"># Filtra: conserva solo el 20% con menor error (las mas confiables)</span>
+particulas_fiables = [img <span class="ck">para</span> img <span class="ck">en</span> todas <span class="ck">si</span> error[img] &lt; umbral_P20]
+
+<span class="cc"># Mide concordancia global con el Test de Mantel</span>
+r = test_Mantel(espacio_latente_1, espacio_latente_2)
+<span class="cc"># r &gt; 0.7 = excelente | r 0.5-0.7 = aceptable | r &lt; 0.5 = revisar</span></pre>
+            <div class="code-note">
+                <strong>&#128161; En cristiano:</strong> Dos interpretes hablan idiomas distintos. FlexConsensus los obliga a usar el mismo diccionario (decoder compartido). Donde coinciden = confiable. Donde discrepan = dudoso. Solo guardamos donde coinciden.
+            </div>
+        </div>
+    </div>
+
+    <!-- Paper Replication Banner -->
+    <div class="inicio-section">
+        <div class="paper-replicate-banner">
+            <div class="prb-left">
+                <div class="prb-badge">&#128270; Replicacion del Paper</div>
+                <h3>¿Los resultados coinciden con el paper?</h3>
+                <p>El paper usa el dataset <strong>IgG-RL (CryoBench)</strong>: anticuerpo IgG simulado con <strong>5 conformaciones conocidas</strong> y <strong>50,000 particulas</strong>. Resultados clave publicados:</p>
+                <div class="prb-stats">
+                    <div class="prb-stat"><span class="prb-val">5</span><span class="prb-label">Conformaciones</span></div>
+                    <div class="prb-stat"><span class="prb-val">50k</span><span class="prb-label">Particulas</span></div>
+                    <div class="prb-stat"><span class="prb-val">&gt;0.7</span><span class="prb-label">Mantel r</span></div>
+                    <div class="prb-stat"><span class="prb-val">~20%</span><span class="prb-label">P20 fiables</span></div>
+                </div>
+                <p style="font-size:.8rem;color:#94a3b8;margin-top:.75rem;">Nuestra app <em>simula</em> la metodologia FlexConsensus. Los resultados son estadisticamente similares al paper pero no identicos (requeririan GPU + dias de entrenamiento real). La topologia de los clusters y la jerarquia de fiabilidad deben ser equivalentes.</p>
+            </div>
+            <div class="prb-right">
+                <button class="prb-btn" onclick="showTab('busqueda'); document.getElementById('search-input').value='antibody IgG'; quickSearch('antibody IgG')">
+                    &#9654; Correr Investigacion del Paper
+                </button>
+                <div class="prb-hint">Busca IgG → selecciona 1IGY → usa 50,000 particulas</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Referencias -->
     <div class="inicio-section">
         <div class="section-title-row">
@@ -413,6 +539,18 @@
     <!-- SUB: Search -->
     <div id="view-search" class="sub-view active">
         <div class="search-hero">
+            <!-- Replicar Paper CTA -->
+            <div class="replicate-cta" onclick="runPaperExperiment()">
+                <div class="rcta-icon">&#128270;</div>
+                <div class="rcta-text">
+                    <div class="rcta-title">Correr Investigacion del Paper</div>
+                    <div class="rcta-sub">IgG-RL (CryoBench) &bull; 50,000 particulas &bull; 5 conformaciones &bull; Replica exacta de Nature Methods 2025</div>
+                </div>
+                <div class="rcta-arrow">&#9654;</div>
+            </div>
+
+            <div class="search-divider"><span>o busca cualquier proteina</span></div>
+
             <h2>Analiza cualquier proteina</h2>
             <p>Busca en <strong>RCSB Protein Data Bank</strong> (200,000+ estructuras) y ejecuta FlexConsensus</p>
             <div class="search-box">

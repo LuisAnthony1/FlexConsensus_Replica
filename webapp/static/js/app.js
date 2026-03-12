@@ -70,6 +70,37 @@ function showView(name) {
 }
 
 // =============================================
+// CODE TABS (Inicio page)
+// =============================================
+function showCodeTab(name, btn) {
+    document.querySelectorAll('.code-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.code-tab').forEach(b => b.classList.remove('active'));
+    const panel = document.getElementById('code-' + name);
+    if (panel) panel.classList.add('active');
+    if (btn) btn.classList.add('active');
+}
+
+// =============================================
+// PAPER EXPERIMENT (Correr Investigacion)
+// =============================================
+function runPaperExperiment() {
+    // Switch to busqueda tab, search for IgG, auto-set paper params
+    showTab('busqueda');
+    showSubView('search');
+    const inp = document.getElementById('search-input');
+    if (inp) inp.value = 'antibody IgG';
+    searchProteins().then(() => {
+        // After search, set paper params
+        setTimeout(() => {
+            const cfgP = document.getElementById('cfg-particles');
+            const cfgL = document.getElementById('cfg-latent');
+            if (cfgP) cfgP.value = '50000';
+            if (cfgL) cfgL.value = '8';
+        }, 800);
+    });
+}
+
+// =============================================
 // 3D PROTEIN VIEWER (3Dmol.js)
 // =============================================
 function destroyViewer(viewerRef) {
