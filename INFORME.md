@@ -8,6 +8,78 @@
 
 ---
 
+## INSTRUCCIONES PARA CLAUDE — GENERAR ARTICULO PARA LATARXIV
+
+> **LEE ESTO PRIMERO SI VAS A GENERAR EL ARTICULO CIENTIFICO**
+
+Este archivo es el informe tecnico completo del proyecto. Con el necesitas generar un **articulo de preprint** listo para subir a **LatArXiv** (plataforma latinoamericana de preprints, equivalente a arXiv).
+
+### Que debe generar Claude
+
+Genera un **articulo cientifico academico** en español con las siguientes secciones obligatorias:
+
+```
+1. Titulo
+2. Autores y afiliaciones
+3. Resumen / Abstract (MAXIMO 250 palabras — requisito estricto de LatArXiv)
+4. Palabras clave (5 a 8 terminos)
+5. Introduccion
+6. Marco Teorico / Antecedentes
+7. Metodologia
+8. Resultados
+9. Discusion
+10. Conclusiones
+11. Limitaciones y trabajo futuro
+12. Referencias (formato APA 7ma edicion)
+```
+
+### Datos del autor (completar antes de enviar a LatArXiv)
+
+```
+Autor:        Luis Anthony [APELLIDO]
+Afiliacion:   [NOMBRE DE LA UNIVERSIDAD], [CIUDAD], [PAIS]
+Email:        [EMAIL INSTITUCIONAL O PERSONAL]
+ORCID:        [CREAR EN https://orcid.org/register SI NO TIENES]
+```
+
+### Instrucciones de estilo para Claude
+
+- Idioma: **español latinoamericano** (sin vosotros, sin anglicismos innecesarios)
+- Tono: **academico-cientifico** pero comprensible para un jurado universitario
+- El resumen NO puede superar **250 palabras** (LatArXiv lo rechaza si pasa ese limite)
+- Las referencias deben incluir **obligatoriamente** el paper original de Herreros et al. 2025
+- Donde se mencione la app web, describir como "replicacion metodologica simulada" — NO decir que es identica al paper
+- Los resultados (r=0.793, 20.5% confiables) deben presentarse en una tabla comparativa
+- Incluir **DOI del paper original**: https://doi.org/10.1038/s41592-025-02841-w
+
+### Requisitos tecnicos de LatArXiv para el PDF final
+
+| Requisito | Detalle |
+|-----------|---------|
+| Formato | PDF unico |
+| Template | Descargar en: https://preprints.latarxiv.org/index.php/latarxiv/how-to-publish |
+| Resumen | Maximo 250 palabras |
+| ORCID | Obligatorio (crear gratis en orcid.org) |
+| PDF final | Template + articulo unidos en UN SOLO archivo (usar ILovePDF o SmallPDF) |
+| Registro | https://preprints.latarxiv.org/index.php/latarxiv/user/register |
+
+### Prompt sugerido para pedirle el articulo a Claude
+
+Copia y pega esto en un chat nuevo con Claude, junto con todo el contenido de este archivo:
+
+```
+Tengo el siguiente informe tecnico de mi proyecto universitario.
+Genera un articulo cientifico completo en español para publicar en LatArXiv (preprint).
+Debe tener: Titulo, Autores, Resumen (MAXIMO 250 palabras), Palabras clave,
+Introduccion, Marco Teorico, Metodologia, Resultados (con tabla comparativa App vs Paper),
+Discusion, Conclusiones, Limitaciones y Referencias en APA 7.
+El articulo describe la replicacion metodologica del paper FlexConsensus
+(Herreros et al., Nature Methods 2025) mediante una aplicacion web interactiva.
+El tono debe ser academico-cientifico pero claro. Usa TODA la informacion del informe.
+```
+
+---
+
 ## TABLA DE CONTENIDO
 
 1. [Que es FlexConsensus](#1-que-es-flexconsensus)
